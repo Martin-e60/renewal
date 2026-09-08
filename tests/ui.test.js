@@ -1,0 +1,84 @@
+import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFile} from 'node:fs/promises';import {parseHTML} from 'linkedom';import crypto from 'node:crypto';import * as dates from '../public/assets/dates.js';import {translateText} from '../public/assets/locales.js';
+const source=(await readFile(new URL('../public/assets/app.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').split('await loadSession();')[0];
+export function harness(){
+ const {document,window}=parseHTML('<html><head><meta name="description"></head><body><div id="app"></div><div id="modal-root"></div><div id="toast-root"></div></body></html>');
+ const stored=new Map(),calls=[];let data={version:0,subscriptions:[],settings:{timeZone:'Europe/Sofia',reminderDays:3,emailVerified:false,emailReminders:false},proPreview:false};
+ class FormData {constructor(form){this.values=new Map([...form.querySelectorAll('input,select,textarea')].filter(el=>el.name&&!el.disabled&&(el.type!=='checkbox'||el.checked)).map(el=>[el.name,el.value]));}get(k){return this.values.get(k)??null;}has(k){return this.values.has(k);}[Symbol.iterator](){return this.values.entries();}}
+ const context={...dates,translateText,document,window:{addEventListener:window.addEventListener.bind(window),scrollTo:()=>{}},NodeFilter:{SHOW_TEXT:4},localStorage:{getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)},console,Intl,Date,URL,URLSearchParams,crypto,FormData,TextEncoder,Blob,setTimeout:()=>0,setInterval:()=>0,requestAnimationFrame:cb=>cb(),location:new URL('http://localhost:3000/dashboard'),fetch:async(url,options={})=>{
+  calls.push({url,...options});const body=options.body?JSON.parse(options.body):null;let status=200,result={};
+  if(url==='/api/data'&&options.method==='PUT'){if(body.version!==data.version){status=409;result={error:'Your account changed in another tab or device. Reload the latest data before saving.'};}else{data={...body,version:data.version+1};result=data;}}
+  else if(url.startsWith('/api/pro/insights')){const items=vm.runInContext('state.subscriptions',context),today=dates.dateKey(new Date(),'Europe/Sofia'),categories={};items.forEach(s=>categories[s.category]=(categories[s.category]||0)+dates.annualAmount(s));result={annual:Object.values(categories).reduce((a,b)=>a+b,0),top:Object.entries(categories).sort((a,b)=>b[1]-a[1])[0]||null,monthlySavings:items.filter(s=>s.lastUsedDate&&dates.dayDifference(today,s.lastUsedDate)>=30).reduce((a,s)=>a+dates.annualAmount(s)/12,0)};}else if(url==='/api/pro/price-changes')result={changes:[]};else if(url==='/api/data')result=data;else if(url==='/api/documents')result={documents:[]};else if(url==='/api/auth/forgot-password')result={message:'If an account exists for that email, a reset link has been sent.'};
+  return {ok:status<400,status,json:async()=>result};
+ }};
+ context.history={pushState:(_,__,p)=>context.location=new URL(p,context.location),replaceState:(_,__,p)=>context.location=new URL(p,context.location)};
+ vm.createContext(context);vm.runInContext(source,context);const run=code=>vm.runInContext(code,context);
+ run("state.user={id:1,name:'UI Tester',email:'ui@example.test'}");
+ const sample=(uid,name,cycle='Monthly',date='2026-01-15')=>({uid,id:'custom',name,customName:'Family',category:'Other',price:10,cycle,renewalDate:date,color:'#6956E8',logo:'S',lastUsedDate:'2026-01-01',lastReviewedDate:null,priceHistory:[]});
+ const tick=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
+ return {document,context,run,calls,tick,sample,stored,Event:window.Event,data:()=>data};
+}
+test('all routes render in EN, DE and ES with associated form labels',async()=>{
+ const h=harness();
+ for(const lang of ['en','de','es'])for(const route of ['/','/pricing','/contact','/privacy','/terms','/cookies','/dashboard','/dashboard/subscriptions','/dashboard/calendar','/dashboard/unused','/dashboard/documents','/dashboard/settings','/dashboard/insights','/dashboard/price-changes']){
+  h.context.location=new URL(route,'http://localhost:3000');h.run(`state.lang='${lang}';state.pro=true;state.subscriptions=${JSON.stringify([h.sample('a','A very long service name'),h.sample('b','Weekly','Weekly')])}`);await h.run('render()');
+  assert.ok(h.document.querySelector('main'),route);assert.doesNotMatch(h.document.body.innerHTML,/undefined|NaN/,route);
+  for(const field of h.document.querySelectorAll('.field')){const input=field.querySelector('input,select,textarea'),label=field.querySelector('label');assert.equal(label.getAttribute('for'),input.id);}
+ }
+});
+test('search clears after cycle rerender and restores records; plan names are searchable',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/subscriptions');h.run(`state.subscriptions=${JSON.stringify([h.sample('a','Netflix'),h.sample('b','Spotify')])};state.dashboardQuery='Netflix'`);await h.run('render()');
+ h.document.querySelector('[data-sub-filter="Monthly"]').click();await h.tick();const search=h.document.querySelector('[data-global-search]');search.value='';search.dispatchEvent(new h.Event('input'));
+ assert.equal([...h.document.querySelectorAll('[data-filter-text]')].filter(el=>!el.hidden).length,2);
+ assert.equal(h.document.querySelector('[data-results-count]').textContent,'2');search.value='Family';search.dispatchEvent(new h.Event('input'));assert.equal(h.document.querySelector('[data-results-count]').textContent,'2');
+ search.value='not found';search.dispatchEvent(new h.Event('input'));assert.equal(h.document.querySelector('[data-search-empty]').hidden,false);
+});
+test('translated subscription form preserves API cycle values and saves entered plan',async()=>{
+ const h=harness();h.run("state.lang='de';subscriptionFormModal('custom')");const form=h.document.querySelector('[data-sub-form]');
+ assert.equal(form.querySelector('select[name="cycle"]').value,'Monthly');
+ for(const [name,value] of Object.entries({service:'My Service',customName:'Home',price:'12.50',category:'Other',renewalDate:'2026-12-20'}))form.querySelector(`[name="${name}"]`).value=value;
+ form.dispatchEvent(new h.Event('submit',{cancelable:true}));await h.tick();
+ const saved=h.data().subscriptions[0];assert.ok(saved);assert.equal(saved.cycle,'Monthly');assert.equal(saved.customName,'Home');assert.equal(saved.renewalDate,'2026-12-20');assert.equal(saved.price,12.5);
+});
+test('editing records price history and preserves recurrence anchor',async()=>{
+ const h=harness();h.run(`state.subscriptions=${JSON.stringify([h.sample('a','Netflix')])};subscriptionFormModal(null,'a')`);const form=h.document.querySelector('[data-sub-form]');
+ form.querySelector('[name="price"]').value='20';form.dispatchEvent(new h.Event('submit',{cancelable:true}));await h.tick();
+ const saved=h.data().subscriptions[0];assert.equal(saved.price,20);assert.equal(saved.renewalDate,'2026-01-15');assert.equal(saved.priceHistory[0].from,10);assert.equal(saved.priceHistory[0].to,20);
+});
+test('forgot-password binding is idempotent and repeat submit sends one request',async()=>{
+ const h=harness();h.run("state.user=null");h.context.location=new URL('http://localhost:3000/forgot-password');await h.run('render()');h.run("bindAuthForm(document.querySelector('[data-auth-form]'))");const form=h.document.querySelector('form');form.querySelector('[name="email"]').value='ui@example.test';
+ for(let i=0;i<2;i++){form.dispatchEvent(new h.Event('submit',{cancelable:true}));await h.tick();}
+ assert.equal(h.calls.filter(c=>c.url==='/api/auth/forgot-password').length,2);
+});
+test('modal background is inert and editing controls and labels exist',()=>{
+ const h=harness();h.run("subscriptionFormModal('custom')");assert.equal(h.document.querySelector('#app').inert,true);assert.equal(h.document.querySelector('[role="dialog"]').getAttribute('aria-labelledby'),'modal-title');
+ for(const field of h.document.querySelectorAll('.field'))assert.ok(field.querySelector('label').getAttribute('for'));
+ h.run('closeModal()');assert.equal(h.document.querySelector('#app').inert,false);
+});
+test('empty insights do not invent a leading category or savings',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/insights');h.run('state.pro=true');await h.run('render()');assert.doesNotMatch(h.document.querySelector('.insight-grid').textContent,/Entertainment|38%|8%/);
+});
+
+test('theme switch preserves unsaved profile fields',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/settings');await h.run('render()');const name=h.document.querySelector('[data-profile-form] [name="name"]');name.value='Unsaved draft';h.document.querySelector('[data-theme-toggle]').click();assert.equal(h.document.querySelector('[data-profile-form] [name="name"]').value,'Unsaved draft');
+});
+test('language switch preserves drafts and never translates a user plan named Home',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/settings');await h.run('render()');h.document.querySelector('[data-profile-form] [name="name"]').value='Unsaved draft';h.run("changeLanguage('de')");assert.equal(h.document.querySelector('[data-profile-form] [name="name"]').value,'Unsaved draft');
+ h.context.location=new URL('http://localhost:3000/dashboard/subscriptions');h.run(`state.subscriptions=${JSON.stringify([{...h.sample('a','Home'),customName:'Home'}])}`);await h.run('render()');assert.equal(h.document.querySelector('.plan-name').textContent,'Home');assert.equal(h.document.querySelector('.subscription-card h3').textContent,'Home');
+});
+test('removal needs confirmation and the notice does not imply cancelling with provider',()=>{
+ const h=harness();h.run(`state.subscriptions=${JSON.stringify([h.sample('a','Netflix')])};confirmRemoval('a')`);assert.match(h.document.querySelector('[role="dialog"]').textContent,/does not cancel/);assert.equal(h.calls.filter(c=>c.method==='PUT').length,0);h.document.querySelector('[data-close-modal]').click();assert.equal(h.run('state.subscriptions.length'),1);
+});
+test('outside-click dismissal works more than once',async()=>{
+ const h=harness();await h.run('render()');
+ for(let i=0;i<3;i++){h.document.querySelector('[data-lang-toggle]').click();assert.ok(h.document.querySelector('[data-lang-menu]').classList.contains('open'));h.document.querySelector('main').dispatchEvent(new h.Event('click',{bubbles:true}));assert.equal(h.document.querySelector('[data-lang-menu]').classList.contains('open'),false);}
+});
+test('calendar dialog uses the selected historical occurrence instead of the next renewal',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/calendar');h.run(`state.subscriptions=${JSON.stringify([h.sample('a','Netflix')])};state.calendarDate=new Date(2026,1,1)`);await h.run('render()');h.document.querySelector('[data-calendar-day="15"]').click();assert.match(h.document.querySelector('[role="dialog"]').textContent,/15 Feb 2026/);
+});
+test('annual and weekly review savings are normalized to monthly',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/insights');h.run(`state.pro=true;state.subscriptions=${JSON.stringify([{...h.sample('a','Yearly service','Yearly'),price:120},{...h.sample('b','Weekly service','Weekly'),price:3}])}`);await h.run('render()');assert.equal(h.document.querySelectorAll('.insight-stat strong')[1].textContent,'€23.00');
+});
+
+test('conflict dismissal preserves the actual edit form and its listeners',async()=>{const h=harness();h.run("subscriptionFormModal('custom')");const field=h.document.querySelector('#modal-root input[name="name"]')||h.document.querySelector('#modal-root input');field.value='Unsaved draft';h.run('confirmRefresh()');h.document.querySelector('[data-keep-editing]').click();assert.equal(field.isConnected,true);assert.equal(field.value,'Unsaved draft');h.run('confirmRefresh();closeModal()');assert.equal(field.isConnected,true);});
+
+test('paid offer uses configured price IDs and has no free entitlement toggle',async()=>{const h=harness();h.run("state.plans=[{id:'price_month',amount:499,interval:'month',intervalCount:1}];proModal()");assert.equal(h.document.querySelector('[data-checkout]').dataset.checkout,'price_month');assert.equal(h.document.querySelector('[data-demo-pro]'),null);h.run("acceptAccount({version:1,subscriptions:[],settings:state.settings,proPreview:true,pro:false})");assert.equal(h.run('state.pro'),false);});

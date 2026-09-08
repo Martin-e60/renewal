@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://renewalradar.example/sitemap.xml

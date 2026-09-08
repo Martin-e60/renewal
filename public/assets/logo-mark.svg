@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RenewalRadar logo">
+  <defs><linearGradient id="g" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse"><stop stop-color="#6956E8"/><stop offset="1" stop-color="#9D8CFF"/></linearGradient></defs>
+  <path fill="url(#g)" d="M11 47V31.5c0-3.6 2.9-6.5 6.5-6.5H23v22H11Zm15-29.6A26 26 0 0 1 52.6 44l-8.7-1.4a17.2 17.2 0 0 0-17.9-16V17.4Zm0 12.2a13.8 13.8 0 0 1 13.9 13.8l-8.2-1.2a5.7 5.7 0 0 0-5.7-4.5v-8.1Z"/>
+  <circle cx="26" cy="43" r="5" fill="#6956E8"/>
+</svg>

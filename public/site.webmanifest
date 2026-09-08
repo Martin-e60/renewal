@@ -1,0 +1,9 @@
+{
+  "name": "RenewalRadar",
+  "short_name": "RenewalRadar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F7FB",
+  "theme_color": "#6956E8",
+  "icons": [{"src":"/assets/logo-mark.svg","sizes":"any","type":"image/svg+xml"}]
+}
