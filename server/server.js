@@ -23,7 +23,7 @@ const MAIL_READY = RESEND_READY || !!(process.env.MAIL_WEBHOOK_URL && process.en
 if (process.env.MAIL_WEBHOOK_URL && new URL(process.env.MAIL_WEBHOOK_URL).protocol !== 'https:' && process.env.NODE_ENV === 'production') throw new Error('Mail webhook must use HTTPS');
 const IS_PROD = process.env.NODE_ENV === 'production';
 if(IS_PROD && new URL(APP_ORIGIN).protocol!=='https:')throw Error('Production APP_ORIGIN must use HTTPS.');
-const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'hello@renewalradar.example';
+const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'hello@duedar.example';
 
 const tursoUrl = process.env.TURSO_DATABASE_URL;
 const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
@@ -303,7 +303,7 @@ async function handleApi(req, res, url) {
       const now = Date.now();
       db.prepare('INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)')
         .run(user.id, hashToken(token), now + RESET_TTL_MS, now);
-      try { await sendMail(email, 'Reset your RenewalRadar password', `Use this link within 30 minutes: ${APP_ORIGIN}/reset-password?token=${encodeURIComponent(token)}`); }
+      try { await sendMail(email, 'Reset your Duedar password', `Use this link within 30 minutes: ${APP_ORIGIN}/reset-password?token=${encodeURIComponent(token)}`); }
       catch { db.prepare('DELETE FROM password_resets WHERE token_hash = ?').run(hashToken(token)); return json(res,503,{error:'Email delivery is temporarily unavailable. Try again later.'}); }
     }
     return json(res, 200, {message:'If an account exists for that email, a reset link has been sent.'});
@@ -415,7 +415,7 @@ const runningDirectly = process.argv[1] && path.resolve(process.argv[1]) === fil
 if (runningDirectly) {
   const server = http.createServer(app);
   server.listen(PORT, () => {
-    console.log(`RenewalRadar running at ${APP_ORIGIN}`);
+    console.log(`Duedar running at ${APP_ORIGIN}`);
     if(!MAIL_READY)console.log('Email reminders and recovery are unavailable until Resend or a mail relay is configured.');
   });
 }
@@ -578,7 +578,7 @@ async function handleAccount(req,res,url){
   if(url.pathname==='/api/account/export'&&req.method==='GET'){
    const profile=db.prepare('SELECT name,email,created_at AS createdAt FROM users WHERE id=?').get(user.id);
    const documents=db.prepare('SELECT name,content,created_at AS createdAt FROM documents WHERE user_id=?').all(user.id).map(d=>({name:d.name,createdAt:d.createdAt,base64:asBuffer(d.content).toString('base64')}));
-   json(res,200,{format:'renewalradar-backup',schemaVersion:1,exportedAt:new Date().toISOString(),profile,data:accountData(user.id),documents},{'Content-Disposition':'attachment; filename="renewalradar-backup.json"'});return true;
+   json(res,200,{format:'duedar-backup',schemaVersion:1,exportedAt:new Date().toISOString(),profile,data:accountData(user.id),documents},{'Content-Disposition':'attachment; filename="duedar-backup.json"'});return true;
   }
   if(url.pathname==='/api/account/sessions'&&req.method==='GET'){
    const hash=hashToken(parseCookies(req).rr_session);
@@ -601,7 +601,7 @@ async function handleAccount(req,res,url){
   }
   if(url.pathname==='/api/account/import'){
    const backup=body.backup;if(!backup||typeof backup!=='object')throw Error('Invalid backup file.');
-   if(backup.format&&(backup.format!=='renewalradar-backup'||backup.schemaVersion!==1))throw Error('Unsupported backup version.');
+   if(backup.format&&(!['duedar-backup','renewalradar-backup'].includes(backup.format)||backup.schemaVersion!==1))throw Error('Unsupported backup version.');
    const source=backup.format?backup.data:backup;
    const incoming=checkedSubscriptions(source?.subscriptions),current=accountData(user.id);
    if(body.version!==current.version){json(res,409,{error:'Your account changed in another tab or device. Reload the latest data before saving.'});return true;}
@@ -638,7 +638,7 @@ async function handleAccount(req,res,url){
    if(db.prepare('SELECT 1 FROM users WHERE email=?').get(email))throw Error('This email address is already in use.');
    const token=crypto.randomBytes(32).toString('base64url'),tokenHash=hashToken(token);
    db.prepare('INSERT INTO pending_email_changes(token_hash,user_id,email,expires_at) VALUES(?,?,?,?)').run(tokenHash,user.id,email,Date.now()+1800000);
-   try{await sendMail(email,'Confirm your new RenewalRadar email',`Sign in to your existing account and confirm your new address: ${APP_ORIGIN}/dashboard/settings?emailToken=${token}. The link expires in 30 minutes.`);}catch{db.prepare('DELETE FROM pending_email_changes WHERE token_hash=?').run(tokenHash);const e=Error('Email delivery is temporarily unavailable. Try again later.');e.status=503;throw e;}
+   try{await sendMail(email,'Confirm your new Duedar email',`Sign in to your existing account and confirm your new address: ${APP_ORIGIN}/dashboard/settings?emailToken=${token}. The link expires in 30 minutes.`);}catch{db.prepare('DELETE FROM pending_email_changes WHERE token_hash=?').run(tokenHash);const e=Error('Email delivery is temporarily unavailable. Try again later.');e.status=503;throw e;}
    json(res,200,{ok:true});return true;
   }
   if(url.pathname==='/api/account/email/confirm'){

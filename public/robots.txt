@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://renewalradar.example/sitemap.xml
+Sitemap: https://duedar.example/sitemap.xml
