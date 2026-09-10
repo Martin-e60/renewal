@@ -37,7 +37,7 @@ export function createBilling({db,appOrigin,json,getCurrentUser,readBody,rateLim
   return summary(id);
  }
  async function ensureCustomer(user){let b=row(user.id);if(b)return b.customer_id;
-  const customer=await stripe.customers.create({email:user.email,name:user.name,metadata:{renewalradar_user_id:String(user.id)}},{idempotencyKey:`rr-customer-${installationId}-${user.id}`});
+  const customer=await stripe.customers.create({email:user.email,name:user.name,metadata:{duedar_user_id:String(user.id)}},{idempotencyKey:`duedar-customer-${installationId}-${user.id}`});
   db.prepare('INSERT INTO billing_accounts(user_id,customer_id) VALUES(?,?)').run(user.id,customer.id);return customer.id;
  }
  async function checkout(user,body){return lock(user.id,async()=>{
@@ -53,7 +53,7 @@ export function createBilling({db,appOrigin,json,getCurrentUser,readBody,rateLim
    if(existing.status==='complete'){await synchronize(user.id);const e=Error('Your payment is being confirmed. Refresh billing status.');e.status=409;throw e;}
   }
   await stripe.customers.update(customer,{email:user.email,name:user.name});
-  const session=await stripe.checkout.sessions.create({mode:'subscription',customer,client_reference_id:String(user.id),line_items:[{price:body.priceId,quantity:1}],success_url:`${appOrigin}/dashboard/settings?checkout=success`,cancel_url:`${appOrigin}/dashboard/settings?checkout=canceled`,subscription_data:{metadata:{renewalradar_user_id:String(user.id)}},metadata:{renewalradar_user_id:String(user.id)},locale:['en','de','es'].includes(body.lang)?body.lang:'auto',billing_address_collection:'required',automatic_tax:{enabled:env.STRIPE_AUTOMATIC_TAX==='true'},tax_id_collection:{enabled:true},expires_at:Math.floor(Date.now()/1000)+1800},{idempotencyKey:`rr-checkout-${installationId}-${user.id}-${body.priceId}-${pending?.session_id||'initial'}-${Math.floor(Date.now()/1800000)}`});
+  const session=await stripe.checkout.sessions.create({mode:'subscription',customer,client_reference_id:String(user.id),line_items:[{price:body.priceId,quantity:1}],success_url:`${appOrigin}/dashboard/settings?checkout=success`,cancel_url:`${appOrigin}/dashboard/settings?checkout=canceled`,subscription_data:{metadata:{duedar_user_id:String(user.id)}},metadata:{duedar_user_id:String(user.id)},locale:['en','de','es'].includes(body.lang)?body.lang:'auto',billing_address_collection:'required',automatic_tax:{enabled:env.STRIPE_AUTOMATIC_TAX==='true'},tax_id_collection:{enabled:true},expires_at:Math.floor(Date.now()/1000)+1800},{idempotencyKey:`duedar-checkout-${installationId}-${user.id}-${body.priceId}-${pending?.session_id||'initial'}-${Math.floor(Date.now()/1800000)}`});
   db.prepare('INSERT INTO billing_checkouts(user_id,session_id,url,price_id,expires_at) VALUES(?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET session_id=excluded.session_id,url=excluded.url,price_id=excluded.price_id,expires_at=excluded.expires_at').run(user.id,session.id,session.url,body.priceId,session.expires_at);
   return {url:session.url};
  });}

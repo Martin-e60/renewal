@@ -1,8 +1,8 @@
 {
-  "name": "renewalradar",
+  "name": "duedar",
   "version": "1.3.2",
   "private": true,
-  "description": "RenewalRadar full-stack starter with authentication and responsive frontend.",
+  "description": "Duedar full-stack starter with authentication and responsive frontend.",
   "type": "module",
   "scripts": {
     "start": "node server/server.js",

@@ -1,4 +1,4 @@
-# RenewalRadar 1.3.2
+# Duedar 1.3.2
 
 A Node.js + SQLite subscription tracker with account-backed records and documents.
 
@@ -105,7 +105,7 @@ Account deletion expires pending checkouts and cancels Stripe subscriptions **be
 
 ## Stripe: configure real payments
 
-1. In your own Stripe account, create a RenewalRadar Pro product and one or two active **EUR, recurring, per-unit** prices (monthly/yearly). The UI reads amounts and intervals from these prices; no price is invented in the app. Configure only prices that grant the same Pro features.
+1. In your own Stripe account, create a Duedar Pro product and one or two active **EUR, recurring, per-unit** prices (monthly/yearly). The UI reads amounts and intervals from these prices; no price is invented in the app. Configure only prices that grant the same Pro features.
 2. Set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_MONTHLY` and optionally `STRIPE_PRICE_YEARLY` in the server environment. Do not put secret keys in frontend code. Start in Stripe test mode.
 3. Create a webhook endpoint at `https://YOUR-DOMAIN/api/billing/webhook`. Subscribe to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed` and `invoice.payment_action_required`. Put its signing secret in `STRIPE_WEBHOOK_SECRET`. Use events for your own account, not Stripe Connect accounts.
 4. Configure and activate Stripe Customer Portal: allow invoice access, payment-method updates and cancellation. If offering plan changes, allow only this product and the configured price IDs. Optionally set `STRIPE_PORTAL_CONFIGURATION`. Configure cancellation at the end of the paid period if that matches your policy.
