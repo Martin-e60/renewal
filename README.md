@@ -1,4 +1,4 @@
-# RenewalRadar 1.2.0
+# RenewalRadar 1.3.2
 
 A Node.js + SQLite subscription tracker with account-backed records and documents.
 
@@ -20,7 +20,7 @@ Set `NODE_ENV=production` for HTTPS deployments so session cookies use `Secure`.
 ## Updating an existing installation
 
 1. Stop the old server and back up its `data` directory.
-2. Replace the application files with this package. **Keep the existing `data` directory and `.env`; do not replace them with an empty directory.** Existing users and sessions remain in SQLite; missing tables are added automatically.
+2. Replace the application files with this package. Keep `.env` out of Git. For a Turso deployment, add `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`; missing tables are created automatically on first start.
 3. Start the new server, sign in with the existing account, and open Settings → Import previous browser records on the browser where you used the old version.
 4. Review the records before confirming the import. Duplicate IDs are skipped. Only the old account-scoped storage is considered; legacy unscoped records are not silently assigned to a user.
 5. Old document metadata does not contain file bytes. Upload those source files again. Old last-used counters have no observation timestamp, so record their actual last-used dates again.
@@ -94,7 +94,7 @@ The remote browser available during this review could not open the local applica
 
 ## Operational limits
 
-Keep `DATA_DIR` on a persistent disk and back up SQLite with an appropriate SQLite backup workflow (or stop the server before copying the database and its WAL files). Temporary hosting storage will not retain account data through redeployment. This is a single-server implementation, not a distributed mail worker or horizontally scaled service. Production launch needs your real support/business details, business-specific legal policies, provider credentials, HTTPS deployment and browser QA. The included legal pages are product summaries, not a complete set of business-specific policies.
+For Vercel/Turso, set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`. The app uses Turso when both values are present and falls back to local SQLite only when neither is present. Do not set one without the other. Uploaded documents are still stored in the database in this version; move them to object storage before allowing large real-world document uploads. Production launch needs your real support/business details, business-specific legal policies, provider credentials, HTTPS deployment and browser QA. The included legal pages are product summaries, not a complete set of business-specific policies.
 
 
 ## Accounts and backups
@@ -126,6 +126,34 @@ docker compose up -d --build
 
 The provided compose file binds the app only to host loopback port 3000; configure your host reverse proxy to terminate public HTTPS. The named volume persists SQLite and uploaded files. Do not run `docker compose down -v` on a live installation: that removes its data volume. `/api/health` checks local database availability; monitor provider webhooks and email delivery separately.
 
-For a non-Docker host: `npm ci --omit=dev`, configure environment variables, start `node server/server.js` under your process supervisor, and mount a persistent `DATA_DIR`. Deploy a **single app instance** with a persistent disk. Multi-instance scaling requires a shared database/worker redesign.
+For a Turso deployment: `npm ci --omit=dev`, configure `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`, then start `node server/server.js`. Local development can omit both values and uses `DATA_DIR`. The in-process reminder interval is suitable for local and single-server development only; a Vercel deployment needs a scheduled endpoint before reminder emails can be relied on.
 
 Before upgrades, stop the service and back up the entire data directory. Restore it with the service stopped. The account JSON export is a portable user backup, not a replacement for operator database backups (which contain auth and billing mappings). No domain, hosting account, Stripe account or email credentials are included in this archive.
+
+
+## 1.3.0 — activation and recurring use
+
+- First-run dashboard has a clear first-subscription action rather than empty graphs. A dismissible setup checklist reflects real saved records, verified email and enabled reminders.
+- The next-payment card shows a concrete service, amount and date, or an explicit quiet week. Radar nodes already open the matching service; a full readable monthly agenda accompanies the calendar, and mobile cells use counts rather than tiny text.
+- The add form initially shows service, price, cycle and next renewal date. Optional category, plan and usage fields are collapsed. Presets supply identity/category only: new records never receive a guessed price/date. Custom-service search carries the typed name forward.
+- Incomplete form data is autosaved to one account-scoped draft **on the current device**. Saving a draft does not create a scheduled subscription. The dashboard restores it, and starting another add flow offers to resume or explicitly discard it. Local drafts are not synced or included in server backups. Their elapsed time includes time away from the form.
+- Successful addition confirms the real saved amount/date and offers reminder setup. It does not claim reminders work before the account has enabled them.
+- Server emails link directly to the subscription; the target survives sign-in. Removed or archived targets show an explanatory message.
+- Reviews cover up to three records not reviewed within 30 days. Keep marks the review date; Check later leaves it pending. Already canceled requires another confirmation, then atomically removes the record from scheduled charges/reminders and archives it on the account. Archive is included in full backups/imports and can be restored. It does not contact/cancel a third-party provider. Monthly reductions are annualized estimates from user-confirmed cancellations, not bank-verified savings.
+- Typography uses available system UI fonts with 16 px primary text and inputs, 14 px supporting text, stronger muted contrast, visible focus states and reduced-motion support. No font download is needed. Ordinary informational text can be selected. Browser caret-navigation mode remains controlled by the browser; the app does not disable this accessibility feature.
+
+## Optional first-party measurement
+
+`ANALYTICS_ENABLED=false` by default. Local per-account event counters are stored on the device without transmitting them. If the operator explicitly enables server measurement, `/api/usage` accepts a fixed event allowlist from authenticated users: add/edit started/completed, reminder opened, review completed. Events contain a random deduplication ID and optional elapsed milliseconds, never service names, prices, email addresses or typed field contents. Server records link to the account and cascade on deletion; records older than 90 days are pruned when new events are accepted. Disclose your enabled measurement in your deployment's privacy information.
+
+Set a separate random `ANALYTICS_ADMIN_TOKEN` of at least 32 characters. `GET /api/admin/usage` requires `Authorization: Bearer <token>` and returns day/event attempt counts, distinct account counts, mean elapsed times and current activation counts. The token must stay outside frontend code and URLs. Reports are operator-only; they are not available through customer login alone. With analytics disabled, the routes return 404.
+
+Repeated draft resumes count as new attempts; distinct-user counts are available separately. Elapsed draft time includes breaks and is capped at one day. Current activation is not a retention cohort. This release supplies measurement, not a statistically validated uplift, automatic A/B allocation or 30/60-day cohort reporting. For an experiment, predefine the metric and sample size before comparing variants. Do not treat a few users or raw event ratios as proof of retention gains.
+
+## 1.3.1 — visual corrections
+
+Pro CTA now occupies its own centered row below the benefits, full-width on mobile. Restored the original six-second radar sweep and service pulses. System reduced-motion preferences still disable animation. These CSS changes were inspected against the supplied screenshots; no new browser screenshots were available.
+
+## 1.3.2 — landing radar stacking
+
+Isolated the hero radar in its own lower stacking context; the price cards sit above every decorative logo and pulse throughout their animations. Dashboard radar behavior is unchanged. CSS inspected against the supplied screenshot; live browser verification remains unavailable.

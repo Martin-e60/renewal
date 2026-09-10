@@ -116,3 +116,25 @@ body:has(.cookie-banner) .floating-tip{display:none}
 @media(max-width:860px){.sidebar-close{display:grid;align-self:flex-end;flex:none;margin-bottom:8px}}
 
 .sync-banner{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:16px;margin-bottom:20px;border:1px solid #b8860b;border-radius:12px;background:var(--card);flex-wrap:wrap}.settings-card .btn{margin:5px 0;white-space:normal}.session-list{padding:0;list-style:none}.session-list li{display:grid;gap:6px;padding:12px 0;border-bottom:1px solid var(--border)}.settings-card{min-width:0;overflow-wrap:anywhere}.modal-actions{display:flex;flex-wrap:wrap;gap:12px}@media(max-width:600px){.sync-banner .btn{width:100%}.price-card{min-width:0}}
+/* 1.3: readable task-focused UI. System fonts load without a font network request. */
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:16px;line-height:1.55}
+:root{--muted:#716D7D}:root[data-theme="dark"]{--muted:#B5B0C6}
+.input,.modal-search input{font-size:1rem;min-height:46px}.field label,.muted,.chart-note,.renewal-name small,.renewal-price small{font-size:.875rem}
+.dash-heading h1{font-size:clamp(1.75rem,3vw,2rem)}.card h2{font-size:1.25rem;line-height:1.3}.renewal-name strong{font-size:1rem}.btn{min-height:44px}
+.focus-card{padding:24px;margin-bottom:20px;border-left:4px solid var(--primary)}.focus-card h1{font-size:clamp(1.75rem,4vw,2rem);max-width:650px}.focus-card h2{font-size:1.5rem}.focus-card p{max-width:65ch}
+.workflow-card{padding:20px;margin-bottom:16px}.workflow-card h2{margin-top:0}.workflow-card progress{width:min(100%,320px);height:12px;accent-color:var(--primary)}.workflow-card .btn{margin:4px 8px 4px 0}.workflow-actions{display:flex;gap:12px;flex-wrap:wrap}.impact-value{font-size:1.75rem;color:var(--primary)}
+.advanced-fields{border:1px solid var(--border);border-radius:12px;padding:12px}.advanced-fields summary{cursor:pointer;min-height:32px;font-weight:600}.advanced-fields .field{margin-top:14px}.archive-row{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--border)}
+.calendar-count{display:none}.calendar-agenda{padding:20px;margin-top:20px}.calendar-agenda>div{display:grid;grid-template-columns:80px 1fr auto;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.sidebar,.dash-topbar,.stat-card{user-select:text;-webkit-user-select:text}button,a,summary{cursor:pointer}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--primary);outline-offset:3px}
+@media(max-width:620px){.calendar-cell>span,.calendar-cell>small{display:none}.calendar-cell .calendar-count{display:block;font-size:.875rem;font-style:normal;color:var(--primary)}.calendar-cell{min-height:64px}.calendar-cell strong{font-size:1rem}.calendar-week span{font-size:.875rem}.focus-card,.workflow-card{padding:18px}.workflow-actions .btn{width:100%}.calendar-agenda>div{grid-template-columns:64px minmax(0,1fr) auto;font-size:.875rem}.calendar-agenda strong{overflow-wrap:anywhere}.dash-heading>.btn{display:inline-flex}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* 1.3.1: independent CTA row, below the Pro benefits. */
+.pro-gate .check-list{display:grid;width:fit-content;max-width:100%;margin:24px auto;text-align:left}
+.pro-gate>[data-open-pro]{display:flex;width:fit-content;max-width:100%;margin:8px auto 0;justify-content:center;white-space:normal}
+@media(max-width:620px){.pro-gate>[data-open-pro]{width:100%}}
+
+/* 1.3.2: isolate decorative radar layers beneath the opaque price cards. */
+.hero-art{isolation:isolate}
+.hero-art>.marketing-radar{position:relative;z-index:0;isolation:isolate}
+.hero-art>.float-card{z-index:1}

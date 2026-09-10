@@ -78,3 +78,21 @@ test('full backups merge atomically, sessions revoke, paid flags cannot be impor
  assert.equal((await req('/api/account/delete',{password:'TestPassword123!',confirmEmail:'backup@example.test'})).status,200);assert.equal((await req('/api/auth/me')).data.user,null);assert.equal((await req('/api/data')).status,401);
  }finally{if(run)await run.stop();await rm(dir,{recursive:true,force:true});}
 });
+
+test('archive persists and round-trips in backups; usage reports require admin authentication',{timeout:15000},async()=>{
+ const dir=await mkdtemp(path.join(os.tmpdir(),'rr-ux13-')),port=await freePort(),base=`http://127.0.0.1:${port}`,adminToken='fixture-admin-token-at-least-32-characters';let run,cookie;
+ const req=async(p,body,method=body?'POST':'GET',headers={})=>{const r=await fetch(base+p,{method,headers:{'Content-Type':'application/json',...(cookie?{Cookie:cookie}:{}),...headers},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};};
+ try{run=await launch({DATA_DIR:dir,PORT:String(port),APP_ORIGIN:base,ANALYTICS_ENABLED:'true',ANALYTICS_ADMIN_TOKEN:adminToken,MAIL_WEBHOOK_URL:'',MAIL_WEBHOOK_TOKEN:''});
+ assert.equal((await req('/api/meta')).data.analyticsEnabled,true);assert.equal((await req('/api/admin/usage')).status,401);
+ cookie=(await req('/api/auth/register',{name:'Workflow Test',email:'workflow@example.test',password:'TestPassword123!'})).cookie;
+ const item={uid:'closed-service',name:'Canceled service',price:120,cycle:'Yearly',renewalDate:'2027-01-01'};let data=(await req('/api/data')).data;
+ let result=await req('/api/data',{...data,archived:[item]},'PUT');assert.equal(result.status,200);data=result.data;assert.equal(data.archived.length,1);assert.equal(data.subscriptions.length,0);
+ assert.equal((await req('/api/data',{...data,subscriptions:[item]},'PUT')).status,400);
+ const backup=(await req('/api/account/export')).data;assert.equal(backup.data.archived[0].uid,item.uid);
+ result=await req('/api/data',{...data,archived:[]},'PUT');data=result.data;
+ assert.equal((await req('/api/account/import',{version:data.version,backup})).status,200);assert.equal((await req('/api/data')).data.archived[0].uid,item.uid);
+ const event={id:'event-fixture-123456789',event:'add_completed',durationMs:45000};assert.equal((await req('/api/usage',event)).status,200);assert.equal((await req('/api/usage',event)).status,200);
+ assert.equal((await req('/api/usage',{...event,id:'other-event-123456789',event:'arbitrary-content'})).status,400);
+ const report=await req('/api/admin/usage',null,'GET',{Authorization:'Bearer '+adminToken});assert.equal(report.status,200);assert.equal(report.data.events[0].attempts,1);assert.equal(report.data.events[0].averageDurationMs,45000);assert.equal(report.data.activation.accounts,1);assert.equal(JSON.stringify(report.data).includes('workflow@example.test'),false);
+ }finally{if(run)await run.stop();await rm(dir,{recursive:true,force:true});}
+});

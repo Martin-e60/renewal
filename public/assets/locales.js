@@ -1,5 +1,50 @@
 // Exact UI strings only; user-entered names and file contents are never translated.
 const rows = `
+Your first renewal|Deine erste Verlängerung|Tu primera renovación
+Which subscription do you want to remember?|Welches Abo möchtest du im Blick behalten?|¿Qué suscripción quieres recordar?
+Add your first subscription|Füge dein erstes Abo hinzu|Añade tu primera suscripción
+Use the amount and date from your provider.|Verwende den Betrag und das Datum deines Anbieters.|Usa el importe y la fecha de tu proveedor.
+Additional settings (optional)|Weitere Einstellungen (optional)|Ajustes adicionales (opcional)
+Save draft for later|Entwurf für später speichern|Guardar borrador para después
+Drafts stay on this device. They do not schedule reminders.|Entwürfe bleiben auf diesem Gerät. Sie lösen keine Erinnerungen aus.|Los borradores quedan en este dispositivo. No programan recordatorios.
+Draft saved on this device.|Entwurf auf diesem Gerät gespeichert.|Borrador guardado en este dispositivo.
+Continue your saved draft?|Gespeicherten Entwurf fortsetzen?|¿Continuar el borrador guardado?
+There is an unfinished subscription on this device.|Auf diesem Gerät gibt es ein unvollständiges Abo.|Hay una suscripción sin terminar en este dispositivo.
+Continue editing|Weiter bearbeiten|Continuar editando
+Discard and start new|Verwerfen und neu beginnen|Descartar y empezar de nuevo
+Finish your draft|Entwurf fertigstellen|Termina tu borrador
+Saved on this device. No reminders are scheduled yet.|Auf diesem Gerät gespeichert. Noch keine Erinnerungen geplant.|Guardado en este dispositivo. Aún no hay recordatorios programados.
+Discard draft|Entwurf verwerfen|Descartar borrador
+Discard draft?|Entwurf verwerfen?|¿Descartar borrador?
+This removes only the draft saved on this device.|Dies entfernt nur den Entwurf auf diesem Gerät.|Solo se elimina el borrador de este dispositivo.
+Next important payment|Nächste wichtige Zahlung|Próximo pago importante
+No scheduled payments in the next 7 days|Keine geplanten Zahlungen in den nächsten 7 Tagen|No hay pagos programados en los próximos 7 días
+Manage reminders|Erinnerungen verwalten|Gestionar recordatorios
+Set up reminders|Erinnerungen einrichten|Configurar recordatorios
+Verify your email|E-Mail bestätigen|Verifica tu correo
+Hide checklist|Checkliste ausblenden|Ocultar lista
+A quick subscription review|Ein kurzer Abo-Check|Una revisión rápida
+Start review|Überprüfung starten|Iniciar revisión
+Keep subscription|Abo behalten|Mantener suscripción
+Check later|Später prüfen|Revisar después
+Already canceled|Bereits gekündigt|Ya cancelada
+Archive canceled subscription?|Gekündigtes Abo archivieren?|¿Archivar la suscripción cancelada?
+Confirm cancellation and archive|Kündigung bestätigen und archivieren|Confirmar cancelación y archivar
+Go back|Zurück|Volver
+Review complete.|Überprüfung abgeschlossen.|Revisión completada.
+Archived subscriptions|Archivierte Abos|Suscripciones archivadas
+Restore tracking|Tracking wiederherstellen|Restaurar seguimiento
+Estimated monthly reduction|Geschätzte monatliche Reduzierung|Reducción mensual estimada
+View archived subscriptions|Archivierte Abos ansehen|Ver suscripciones archivadas
+Subscription added|Abo hinzugefügt|Suscripción añadida
+Add another subscription|Weiteres Abo hinzufügen|Añadir otra suscripción
+Email reminders are enabled.|E-Mail-Erinnerungen sind aktiviert.|Los recordatorios por correo están activados.
+Set up reminders to receive an email before renewal.|Richte Erinnerungen ein, um vor der Verlängerung eine E-Mail zu erhalten.|Configura recordatorios para recibir un correo antes de la renovación.
+Payments this month|Zahlungen diesen Monat|Pagos de este mes
+No scheduled payments this month.|Diesen Monat sind keine Zahlungen geplant.|No hay pagos programados este mes.
+Saving…|Wird gespeichert…|Guardando…
+Add|Hinzufügen|Añadir
+
 Billing|Abrechnung|Facturación
 Manage billing|Abrechnung verwalten|Gestionar facturación
 Refresh billing status|Zahlungsstatus aktualisieren|Actualizar estado de pago
