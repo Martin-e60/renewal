@@ -4,6 +4,3 @@ data/*.db-shm
 data/*.db-wal
 .env
 .DS_Store
-.env
-data/
-node_modules/
