@@ -9,10 +9,10 @@ export function createBilling({db,appOrigin,json,getCurrentUser,readBody,rateLim
  // Only local test fixtures may replace the Stripe API host.
  if(env.STRIPE_TEST_API_BASE){const u=new URL(env.STRIPE_TEST_API_BASE);if(env.NODE_ENV!=='test'||!['127.0.0.1','localhost'].includes(u.hostname))throw Error('Stripe test API override is restricted to local tests.');Object.assign(options,{host:u.hostname,port:Number(u.port)||80,protocol:u.protocol.slice(0,-1),maxNetworkRetries:0});}
  const stripe=env.STRIPE_SECRET_KEY?new Stripe(env.STRIPE_SECRET_KEY,options):null;
- db.exec(`CREATE TABLE IF NOT EXISTS billing_accounts(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,customer_id TEXT UNIQUE NOT NULL,subscription_id TEXT,status TEXT NOT NULL DEFAULT 'none',period_end INTEGER NOT NULL DEFAULT 0,cancel_at_end INTEGER NOT NULL DEFAULT 0,synced_at INTEGER NOT NULL DEFAULT 0);
+ for(const statement of `CREATE TABLE IF NOT EXISTS billing_accounts(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,customer_id TEXT UNIQUE NOT NULL,subscription_id TEXT,status TEXT NOT NULL DEFAULT 'none',period_end INTEGER NOT NULL DEFAULT 0,cancel_at_end INTEGER NOT NULL DEFAULT 0,synced_at INTEGER NOT NULL DEFAULT 0);
  CREATE TABLE IF NOT EXISTS billing_checkouts(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,session_id TEXT NOT NULL,url TEXT,price_id TEXT NOT NULL,expires_at INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS billing_events(event_id TEXT PRIMARY KEY,processed_at INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS billing_locks(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,owner TEXT NOT NULL,expires_at INTEGER NOT NULL);`);
+ CREATE TABLE IF NOT EXISTS billing_locks(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,owner TEXT NOT NULL,expires_at INTEGER NOT NULL);`.split(';').map(value=>value.trim()).filter(Boolean)) db.exec(statement);
  db.exec('CREATE TABLE IF NOT EXISTS installation(key TEXT PRIMARY KEY,value TEXT NOT NULL)');
  db.prepare('INSERT OR IGNORE INTO installation VALUES(?,?)').run('billing_id',crypto.randomUUID());
  const installationId=db.prepare('SELECT value FROM installation WHERE key=?').get('billing_id').value;

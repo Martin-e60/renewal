@@ -4,7 +4,7 @@ import { readFile, stat, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import crypto from 'node:crypto';
-import { DatabaseSync } from 'node:sqlite';
+import Database from 'libsql';
 import { loadEnvFile } from 'node:process';
 import { validDate, dateKey, nextRenewal, dayDifference } from '../public/assets/dates.js';
 
@@ -25,8 +25,26 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 if(IS_PROD && new URL(APP_ORIGIN).protocol!=='https:')throw Error('Production APP_ORIGIN must use HTTPS.');
 const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'hello@renewalradar.example';
 
-const db = new DatabaseSync(path.join(dataDir, 'renewalradar.db'));
-db.exec(`
+const tursoUrl = process.env.TURSO_DATABASE_URL;
+const tursoAuthToken = process.env.TURSO_AUTH_TOKEN;
+if ((tursoUrl && !tursoAuthToken) || (!tursoUrl && tursoAuthToken)) {
+  throw new Error('Set both TURSO_DATABASE_URL and TURSO_AUTH_TOKEN, or neither for local development.');
+}
+// libSQL keeps the existing synchronous SQLite API, but executes against Turso
+// when the two TURSO_* variables are present. Local DATA_DIR mode stays intact
+// for development and automated tests.
+const db = tursoUrl
+  ? new Database(tursoUrl, { authToken: tursoAuthToken })
+  : new Database(path.join(dataDir, 'renewalradar.db'));
+function execSchema(script) {
+  for (const statement of script.split(';').map((value) => value.trim()).filter(Boolean)) {
+    // These pragmas configure a local SQLite file. Turso manages its own
+    // storage and rejects them on its remote protocol.
+    if (tursoUrl && /^PRAGMA\s/i.test(statement)) continue;
+    db.exec(statement);
+  }
+}
+execSchema(`
   PRAGMA journal_mode = WAL;
   PRAGMA foreign_keys = ON;
   CREATE TABLE IF NOT EXISTS users (
@@ -55,7 +73,7 @@ db.exec(`
   );
 `);
 
-db.exec(`
+execSchema(`
  CREATE TABLE IF NOT EXISTS account_data (user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, version INTEGER NOT NULL DEFAULT 0, payload TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS documents (id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, name TEXT NOT NULL, content BLOB NOT NULL, created_at INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS pending_email_changes (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, email TEXT NOT NULL, expires_at INTEGER NOT NULL);
@@ -90,6 +108,13 @@ function validPassword(password) {
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function asBuffer(value) {
+  if (Buffer.isBuffer(value)) return value;
+  if (value instanceof ArrayBuffer) return Buffer.from(value);
+  if (ArrayBuffer.isView(value)) return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+  return Buffer.from(value);
 }
 
 function hashPassword(password) {
@@ -200,7 +225,7 @@ async function handleApi(req, res, url) {
 
   if(req.method==='GET'&&url.pathname==='/api/health'){db.prepare('SELECT 1').get();return json(res,200,{ok:true});}
   if (req.method === 'GET' && url.pathname === '/api/meta') {
-    return json(res, 200, { contactEmail: CONTACT_EMAIL, mailReady: MAIL_READY,billingReady:billing.ready });
+    return json(res, 200, { contactEmail: CONTACT_EMAIL, mailReady: MAIL_READY,analyticsEnabled:process.env.ANALYTICS_ENABLED==='true',billingReady:billing.ready });
   }
 
   if (req.method === 'GET' && url.pathname === '/api/auth/me') {
@@ -310,6 +335,7 @@ async function handleApi(req, res, url) {
     return json(res, 200, { ok: true }, {'Set-Cookie':clearSessionCookie()});
   }
 
+  if(await handleUsage(req,res,url))return;
   if(await billing.handle(req,res,url))return;
   if(await handleAccount(req,res,url))return;
   const handled = await handleRecords(req,res,url);
@@ -458,7 +484,8 @@ async function handleRecords(req,res,url) {
       try{new Intl.DateTimeFormat('en',{timeZone}).format();}catch{throw Error('Invalid time zone.');}
       const reminderDays=Number(b.settings?.reminderDays??3);
       if(!Number.isInteger(reminderDays)||reminderDays<0||reminderDays>30)throw Error('Reminder lead time must be 0–30 days.');
-      const updated={subscriptions,settings:{timeZone,reminderDays,emailVerified:current.settings.emailVerified===true,emailReminders:MAIL_READY&&current.settings.emailVerified===true&&b.settings?.emailReminders===true},proPreview:false};
+      const archived=checkedSubscriptions(b.archived===undefined?(current.archived||[]):b.archived);if(archived.some(s=>subscriptions.some(a=>a.uid===s.uid)))throw Error('An archived subscription cannot also be active.');
+      const updated={subscriptions,archived,settings:{timeZone,reminderDays,emailVerified:current.settings.emailVerified===true,emailReminders:MAIL_READY&&current.settings.emailVerified===true&&b.settings?.emailReminders===true},proPreview:false};
       writeAccount(user.id,updated,current.version+1);json(res,200,{accountId:user.id,...accountData(user.id)});return true;
     }
     if(url.pathname==='/api/reminders/verify'&&req.method==='POST'){
@@ -494,7 +521,7 @@ async function handleRecords(req,res,url) {
       const doc=db.prepare('SELECT * FROM documents WHERE id=? AND user_id=?').get(docMatch[1],user.id);
       if(!doc){json(res,404,{error:'Document not found.'});return true;}
       if(req.method==='DELETE'){db.prepare('DELETE FROM documents WHERE id=? AND user_id=?').run(doc.id,user.id);json(res,200,{ok:true});return true;}
-      res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':`attachment; filename="document"; filename*=UTF-8''${encodeURIComponent(doc.name).replace(/'/g,'%27')}`,'Cache-Control':'no-store','Content-Length':doc.content.length});res.end(doc.content);return true;
+      const content=asBuffer(doc.content);res.writeHead(200,{'Content-Type':'application/octet-stream','Content-Disposition':`attachment; filename="document"; filename*=UTF-8''${encodeURIComponent(doc.name).replace(/'/g,'%27')}`,'Cache-Control':'no-store','Content-Length':content.length});res.end(content);return true;
     }
     json(res,404,{error:'Not found.'});return true;
   }catch(e){json(res,e.status||400,{error:e.message==='Invalid JSON'?'Invalid request.':e.message});return true;}
@@ -516,7 +543,7 @@ async function deliverReminders(){
         const key=`${s.uid}:${due}`;
         if(db.prepare('SELECT 1 FROM reminder_deliveries WHERE user_id=? AND delivery_key=?').get(row.user_id,key))continue;
         try{
-          await sendMail(row.email,`Renewal reminder: ${s.name}`,`${s.name}${s.customName?' ('+s.customName+')':''}: EUR ${s.price.toFixed(2)} is scheduled for ${due}. Review it at ${APP_ORIGIN}/dashboard/subscriptions`,`${row.user_id}:${key}`);
+          await sendMail(row.email,`Renewal reminder: ${s.name}`,`${s.name}${s.customName?' ('+s.customName+')':''}: EUR ${s.price.toFixed(2)} is scheduled for ${due}. Review it at ${APP_ORIGIN}/dashboard/subscriptions?subscription=${encodeURIComponent(s.uid)}`,`${row.user_id}:${key}`);
           db.prepare('INSERT OR IGNORE INTO reminder_deliveries(user_id,delivery_key,created_at) VALUES(?,?,?)').run(row.user_id,key,Date.now());
         }catch{console.error('A reminder could not be delivered; the next run will retry.');}
       }
@@ -542,7 +569,7 @@ async function handleAccount(req,res,url){
  try{
   if(url.pathname==='/api/account/export'&&req.method==='GET'){
    const profile=db.prepare('SELECT name,email,created_at AS createdAt FROM users WHERE id=?').get(user.id);
-   const documents=db.prepare('SELECT name,content,created_at AS createdAt FROM documents WHERE user_id=?').all(user.id).map(d=>({name:d.name,createdAt:d.createdAt,base64:Buffer.from(d.content).toString('base64')}));
+   const documents=db.prepare('SELECT name,content,created_at AS createdAt FROM documents WHERE user_id=?').all(user.id).map(d=>({name:d.name,createdAt:d.createdAt,base64:asBuffer(d.content).toString('base64')}));
    json(res,200,{format:'renewalradar-backup',schemaVersion:1,exportedAt:new Date().toISOString(),profile,data:accountData(user.id),documents},{'Content-Disposition':'attachment; filename="renewalradar-backup.json"'});return true;
   }
   if(url.pathname==='/api/account/sessions'&&req.method==='GET'){
@@ -572,11 +599,14 @@ async function handleAccount(req,res,url){
    if(body.version!==current.version){json(res,409,{error:'Your account changed in another tab or device. Reload the latest data before saving.'});return true;}
    const existingIds=new Set(current.subscriptions.map(s=>s.uid)),added=incoming.filter(s=>!existingIds.has(s.uid));
    const subscriptions=checkedSubscriptions([...current.subscriptions,...added]);
+   const activeIds=new Set(subscriptions.map(s=>s.uid));const oldArchive=current.archived||[],archiveIds=new Set(oldArchive.map(s=>s.uid));
+   const importedArchive=checkedSubscriptions(source.archived||[]).filter(s=>!activeIds.has(s.uid)&&!archiveIds.has(s.uid));
+   const archived=checkedSubscriptions([...oldArchive.filter(s=>!activeIds.has(s.uid)),...importedArchive]);
    const sourceDocs=backup.format?backup.documents||[]:[];
    if(!Array.isArray(sourceDocs)||sourceDocs.length>500)throw Error('Maximum 500 documents per account.');
    const existingDocs=db.prepare('SELECT name,content FROM documents WHERE user_id=?').all(user.id);
    const signature=(name,bytes)=>crypto.createHash('sha256').update(name).update('\0').update(bytes).digest('hex');
-   const signatures=new Set(existingDocs.map(d=>signature(d.name,d.content)));let total=existingDocs.reduce((sum,d)=>sum+d.content.length,0),toAdd=[];
+   const signatures=new Set(existingDocs.map(d=>signature(d.name,asBuffer(d.content))));let total=existingDocs.reduce((sum,d)=>sum+asBuffer(d.content).length,0),toAdd=[];
    for(const d of sourceDocs){
     if(!d||typeof d.name!=='string'||!d.name.trim()||d.name.length>240||/[\x00-\x1f]/.test(d.name)||typeof d.base64!=='string'||!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(d.base64))throw Error('Invalid document in backup.');
     const bytes=Buffer.from(d.base64,'base64');if(!bytes.length||bytes.length>5*1024*1024)throw Error('Choose a non-empty file up to 5 MB.');
@@ -586,7 +616,7 @@ async function handleAccount(req,res,url){
    if(existingDocs.length+toAdd.length>500)throw Error('Maximum 500 documents per account.');
    // Merge data only: never import authentication, email verification or paid entitlements.
    db.exec('BEGIN');try{
-    writeAccount(user.id,{...current,subscriptions},current.version+1);
+    writeAccount(user.id,{...current,subscriptions,archived},current.version+1);
     for(const d of toAdd)db.prepare('INSERT INTO documents(id,user_id,name,content,created_at) VALUES(?,?,?,?,?)').run(crypto.randomUUID(),user.id,d.name,d.bytes,d.createdAt);
     db.exec('COMMIT');
    }catch(e){db.exec('ROLLBACK');throw e;}
@@ -627,3 +657,26 @@ function expireTemporaryRecords(){
  for(const [key,value] of loginAttempts)if(now-value.started>3600000)loginAttempts.delete(key);
 }
 setInterval(expireTemporaryRecords,3600000).unref();
+
+async function handleUsage(req,res,url){
+ if(!['/api/usage','/api/admin/usage'].includes(url.pathname))return false;
+ if(process.env.ANALYTICS_ENABLED!=='true'){json(res,404,{error:'Not found.'});return true;}
+ db.exec('CREATE TABLE IF NOT EXISTS usage_events(id TEXT PRIMARY KEY,user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,event TEXT NOT NULL,day TEXT NOT NULL,duration_ms INTEGER)');
+ if(url.pathname==='/api/admin/usage'){
+  const expected=process.env.ANALYTICS_ADMIN_TOKEN||'',provided=String(req.headers.authorization||'').replace(/^Bearer /,'');
+  if(expected.length<32||!String(req.headers.authorization||'').startsWith('Bearer ')||!crypto.timingSafeEqual(crypto.createHash('sha256').update(provided).digest(),crypto.createHash('sha256').update(expected).digest())){json(res,401,{error:'Unauthorized.'});return true;}
+  if(req.method!=='GET'){json(res,405,{error:'Method not allowed.'});return true;}
+  json(res,200,{events:db.prepare('SELECT day,event,COUNT(*) AS attempts,COUNT(DISTINCT user_id) AS users,AVG(duration_ms) AS averageDurationMs FROM usage_events GROUP BY day,event ORDER BY day DESC').all(),activation:db.prepare("SELECT (SELECT COUNT(*) FROM users) AS accounts, SUM(CASE WHEN json_array_length(payload,'$.subscriptions')>0 THEN 1 ELSE 0 END) AS withSubscriptions,SUM(CASE WHEN json_array_length(payload,'$.subscriptions')>0 AND json_extract(payload,'$.settings.emailReminders')=1 THEN 1 ELSE 0 END) AS withReminders FROM account_data").get()});return true;
+ }
+ const user=getCurrentUser(req);if(!user){json(res,401,{error:'Sign in required.'});return true;}
+ if(req.method!=='POST'){json(res,405,{error:'Method not allowed.'});return true;}
+ try{
+  if(rateLimited('usage:'+user.id,120)){json(res,429,{error:'Too many events.'});return true;}
+  const body=await readAuthenticatedBody(req,user.id,4096),allowed=['add_started','add_completed','edit_started','edit_completed','reminder_opened','review_completed'];
+  if(!allowed.includes(body.event)||typeof body.id!=='string'||!/^[a-zA-Z0-9-]{16,80}$/.test(body.id))throw Error('Invalid event.');
+  const duration=body.durationMs==null?null:Number(body.durationMs);if(duration!==null&&(!Number.isInteger(duration)||duration<0||duration>86400000))throw Error('Invalid duration.');
+  db.prepare('DELETE FROM usage_events WHERE day<?').run(dateKey(new Date(Date.now()-90*86400000),'UTC'));
+  db.prepare('INSERT OR IGNORE INTO usage_events VALUES(?,?,?,?,?)').run(body.id,user.id,body.event,dateKey(new Date(),'UTC'),duration);
+  json(res,200,{ok:true});
+ }catch(e){json(res,e.status||400,{error:e.message});}return true;
+}
