@@ -394,7 +394,7 @@ async function serveStatic(req, res, url) {
   }
 }
 
-const server = http.createServer(async (req, res) => {
+export async function app(req, res) {
   securityHeaders(res);
   try {
     const url = new URL(req.url, APP_ORIGIN);
@@ -407,12 +407,18 @@ const server = http.createServer(async (req, res) => {
     console.error(error);
     json(res, 500, { error: 'Unexpected server error.' });
   }
-});
+}
 
-server.listen(PORT, () => {
-  console.log(`RenewalRadar running at ${APP_ORIGIN}`);
-  if(!MAIL_READY)console.log('Email reminders and recovery are unavailable until Resend or a mail relay is configured.');
-});
+// Vercel imports `app` from an API function. Only a direct `node server/server.js`
+// invocation starts a long-lived local HTTP server.
+const runningDirectly = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (runningDirectly) {
+  const server = http.createServer(app);
+  server.listen(PORT, () => {
+    console.log(`RenewalRadar running at ${APP_ORIGIN}`);
+    if(!MAIL_READY)console.log('Email reminders and recovery are unavailable until Resend or a mail relay is configured.');
+  });
+}
 
 function accountData(userId) {
   const row=db.prepare('SELECT version,payload FROM account_data WHERE user_id=?').get(userId);
@@ -528,7 +534,7 @@ async function handleRecords(req,res,url) {
 }
 
 let remindersRunning=false;
-async function deliverReminders(){
+export async function deliverReminders(){
   if(!MAIL_READY||remindersRunning)return;remindersRunning=true;
   try{
     const rows=db.prepare('SELECT a.user_id,a.payload,u.email FROM account_data a JOIN users u ON u.id=a.user_id').all();
@@ -550,7 +556,9 @@ async function deliverReminders(){
     }
   }finally{remindersRunning=false;}
 }
-setInterval(()=>deliverReminders().catch(()=>console.error('Reminder worker failed.')),Math.max(1000,Number(process.env.REMINDER_INTERVAL_MS)||60000)).unref();
+if (!process.env.VERCEL) {
+  setInterval(()=>deliverReminders().catch(()=>console.error('Reminder worker failed.')),Math.max(1000,Number(process.env.REMINDER_INTERVAL_MS)||60000)).unref();
+}
 
 async function readAuthenticatedBody(req,userId,limit){
   const body=await readJsonBody(req,limit);
@@ -656,7 +664,8 @@ function expireTemporaryRecords(){
  for(const table of ['email_confirmations','pending_email_changes'])db.prepare(`DELETE FROM ${table} WHERE expires_at<=?`).run(now);
  for(const [key,value] of loginAttempts)if(now-value.started>3600000)loginAttempts.delete(key);
 }
-setInterval(expireTemporaryRecords,3600000).unref();
+if (!process.env.VERCEL) setInterval(expireTemporaryRecords,3600000).unref();
+export { expireTemporaryRecords };
 
 async function handleUsage(req,res,url){
  if(!['/api/usage','/api/admin/usage'].includes(url.pathname))return false;
