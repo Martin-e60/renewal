@@ -20,6 +20,7 @@ const PORT = Number(process.env.PORT || 3000);
 const APP_ORIGIN = new URL(process.env.APP_ORIGIN || (process.env.CODESPACE_NAME ? `https://${process.env.CODESPACE_NAME}-${PORT}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN || 'app.github.dev'}` : `http://localhost:${PORT}`)).origin;
 const ALLOWED_ORIGINS = new Set([APP_ORIGIN, ...(!process.env.APP_ORIGIN && !process.env.CODESPACE_NAME ? [`http://127.0.0.1:${PORT}`] : []), ...(process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean).map(v=>new URL(v.trim()).origin)]);
 const RESEND_READY=!!(process.env.RESEND_API_KEY&&process.env.MAIL_FROM);
+const PASSWORD_RESET_TEMPLATE_ID=String(process.env.RESEND_PASSWORD_RESET_TEMPLATE_ID||'').trim();
 const MAIL_READY = RESEND_READY || !!(process.env.MAIL_WEBHOOK_URL && process.env.MAIL_WEBHOOK_TOKEN);
 if (process.env.MAIL_WEBHOOK_URL && new URL(process.env.MAIL_WEBHOOK_URL).protocol !== 'https:' && process.env.NODE_ENV === 'production') throw new Error('Mail webhook must use HTTPS');
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -305,7 +306,13 @@ async function handleApi(req, res, url) {
       const now = Date.now();
       db.prepare('INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)')
         .run(user.id, hashToken(token), now + RESET_TTL_MS, now);
-      try { await sendMail(email, 'Reset your Duedar password', `Use this link within 30 minutes: ${APP_ORIGIN}/reset-password?token=${encodeURIComponent(token)}`); }
+      const resetUrl=`${APP_ORIGIN}/reset-password?token=${encodeURIComponent(token)}`;
+const resetText=`Use this link within 30 minutes: ${resetUrl}`;
+const resetTemplate=RESEND_READY&&PASSWORD_RESET_TEMPLATE_ID
+  ? {id:PASSWORD_RESET_TEMPLATE_ID,variables:{RESET_URL:resetUrl}}
+  : null;
+
+try { await sendMail(email, 'Reset your Duedar password', resetText, crypto.randomUUID(), resetTemplate); }
       catch { db.prepare('DELETE FROM password_resets WHERE token_hash = ?').run(hashToken(token)); return json(res,503,{error:'Email delivery is temporarily unavailable. Try again later.'}); }
     }
     return json(res, 200, {message:'If an account exists for that email, a reset link has been sent.'});
@@ -453,13 +460,36 @@ function checkedSubscriptions(items) {
     return {uid,id:String(s.id||'custom').slice(0,40),name,customName,category,price:Math.round(s.price*100)/100,cycle:s.cycle,renewalDate:s.renewalDate,lastUsedDate:s.lastUsedDate||null,lastReviewedDate:s.lastReviewedDate||null,priceHistory,color:/^#[0-9a-f]{6}$/i.test(s.color)?s.color:'#6956E8',logo:String(s.logo||name[0]).slice(0,12)};
   });
 }
-async function sendMail(to,subject,text,idempotencyKey=crypto.randomUUID()) {
-  if(!MAIL_READY)throw Error('Email delivery is not configured.');
-  const endpoint=RESEND_READY?'https://api.resend.com/emails':process.env.MAIL_WEBHOOK_URL;
-  const body=RESEND_READY?{from:process.env.MAIL_FROM,to:[to],subject,text}:{to,subject,text};
-  const token=RESEND_READY?process.env.RESEND_API_KEY:process.env.MAIL_WEBHOOK_TOKEN;
-  const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'Idempotency-Key':idempotencyKey},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});
-  if(!response.ok)throw Error('Email delivery failed.');
+async function sendMail(to, subject, text, idempotencyKey = crypto.randomUUID(), template = null) {
+  if (!MAIL_READY) throw Error('Email delivery is not configured.');
+
+  const usingResend = RESEND_READY;
+  const endpoint = usingResend
+    ? 'https://api.resend.com/emails'
+    : process.env.MAIL_WEBHOOK_URL;
+
+  const body = usingResend
+    ? template
+      ? { from: process.env.MAIL_FROM, to: [to], subject, template }
+      : { from: process.env.MAIL_FROM, to: [to], subject, text }
+    : { to, subject, text };
+
+  const token = usingResend
+    ? process.env.RESEND_API_KEY
+    : process.env.MAIL_WEBHOOK_TOKEN;
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'Idempotency-Key': idempotencyKey
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000)
+  });
+
+  if (!response.ok) throw Error('Email delivery failed.');
 }
 
 async function handleRecords(req,res,url) {
