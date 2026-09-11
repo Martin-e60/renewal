@@ -7,7 +7,7 @@
   ],
   "rewrites": [
     {
-      "source": "/dashboard/:path*",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
