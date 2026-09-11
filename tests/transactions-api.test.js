@@ -37,3 +37,52 @@ test('statement import previews, deduplicates re-uploads, links confirmed subscr
   assert.ok((await req('/api/data')).data.subscriptions.some(s=>s.name==='Netflix'),'removing an import keeps tracked subscriptions');
  }finally{if(run)await run.stop();await rm(dir,{recursive:true,force:true});}
 });
+
+test('manual entries and merchant rules persist, respect ownership and do not rewrite unrelated transactions',{timeout:30000},async()=>{
+ const dir=await mkdtemp(path.join(os.tmpdir(),'rr-tx-tools-')),port=await freePort(),base=`http://127.0.0.1:${port}`;let run,cookie;
+ const req=async(p,body,method=body?'POST':'GET',c=cookie)=>{const r=await fetch(base+p,{method,headers:{'Content-Type':'application/json',...(c?{Cookie:c}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};};
+ try{
+  run=await launch({DATA_DIR:dir,PORT:String(port),APP_ORIGIN:base,MAIL_WEBHOOK_URL:'',MAIL_WEBHOOK_TOKEN:''});
+  cookie=(await req('/api/auth/register',{name:'Tools Test',email:'tools@example.test',password:'TestPassword123!'})).cookie;
+  const other=(await req('/api/auth/register',{name:'Other',email:'tools-other@example.test',password:'TestPassword123!'},'POST',null)).cookie;
+  const manual={requestId:'10000000-0000-4000-8000-000000000001',accountName:'Cash',date:'2026-09-11',description:'Corner Cafe',amount:-8.5,currency:'EUR',kind:'expense',category:'Other'};
+  const added=await req('/api/transactions/manual',manual);assert.equal(added.status,200);assert.equal(added.data.created,true);
+  const accountId=added.data.bankAccountId,id=added.data.id;
+  assert.equal((await req('/api/transactions/manual',manual)).data.created,false,'retry is idempotent');
+  assert.equal((await req('/api/transactions/manual',{...manual,accountId},'POST',other)).status,400,'cannot write to another user account');
+  for(const change of [{amount:8.5},{date:'2026-02-30'},{kind:'invalid'},{currency:'EU'},{category:'invalid'}]) assert.equal((await req('/api/transactions/manual',{...manual,...change})).status,400);
+  const salary=await req('/api/transactions/manual',{...manual,requestId:'10000000-0000-4000-8000-000000000002',description:'Salary',amount:1000,kind:'income'});assert.equal(salary.status,200);
+  const rows=[{date:'2026-08-10',description:'Corner Cafe',amount:-10,currency:'EUR'},{date:'2026-08-11',description:'Corner Cafe',amount:-12,currency:'EUR'},{date:'2026-08-12',description:'Bookshop',amount:-30,currency:'USD'}];
+  await req('/api/transactions/import',{accountName:'Bank',fileName:'bank.csv',rows});
+  let data=(await req('/api/transactions')).data;
+  const cafe=data.transactions.filter(t=>t.description==='Corner Cafe'),bankId=data.accounts.find(a=>a.name==='Bank').id,unselected=cafe.find(t=>t.amount===-12);
+  const ids=[id,cafe.find(t=>t.amount===-10).id];
+  assert.equal((await req('/api/transactions/bulk-category',{ids,category:'Food & groceries',rememberRule:true},'POST',other)).status,404);
+  assert.equal((await req('/api/transactions/bulk-category',{ids:[id,'not-found'],category:'Health',rememberRule:true})).status,404);
+  assert.equal((await req('/api/transactions/bulk-category',{ids:[id,salary.data.id],category:'Health',rememberRule:true})).status,400,'mixed kinds roll back entirely');
+  assert.equal((await req('/api/transactions')).data.rules.length,0);
+  assert.deepEqual((await req('/api/transactions/bulk-category',{ids,category:'Health',rememberRule:true})).data,{updated:2,rulesSaved:1});
+  data=(await req('/api/transactions')).data;
+  assert.equal(data.transactions.find(t=>t.id===unselected.id).category,unselected.category,'unselected history is unchanged');
+  assert.ok(ids.every(id=>data.transactions.find(t=>t.id===id).category==='Health'));
+  assert.equal(data.rules.length,1);assert.equal((await req('/api/transactions',null,'GET',other)).data.rules.length,0);
+  assert.equal(data.freshness.find(a=>a.accountId===accountId).lastImportAt,null,'manual entries are not imports');
+  assert.equal(data.freshness.find(a=>a.accountId===bankId).lastImportedTransactionDate,'2026-08-12');
+  const future=[{date:'2026-09-12',description:'Corner Cafe CARD 1234',amount:-7,currency:'EUR'},{date:'2026-09-13',description:'Corner Cafe refund',amount:2,currency:'EUR'}];
+  let preview=await req('/api/transactions/preview',{accountId:bankId,rows:future});
+  assert.ok(preview.data.rows.every(t=>t.category==='Health'),'rules apply to future matching merchants, including refunds');
+  assert.equal((await req('/api/transactions/preview',{accountName:'Other Bank',rows:future},'POST',other)).data.rows[0].category,'Food & groceries','another user gets only the built-in category');
+  await req('/api/transactions/import',{accountId:bankId,fileName:'next.csv',rows:preview.data.rows.map(t=>({...t,category:'Entertainment'}))});
+  assert.ok((await req('/api/transactions')).data.transactions.filter(t=>t.date>='2026-09-12').every(t=>t.category==='Entertainment'),'explicit review edits override remembered rules');
+  // Rule survives a server restart, then can be replaced and removed without rewriting history.
+  await run.stop();run=null;run=await launch({DATA_DIR:dir,PORT:String(port),APP_ORIGIN:base,MAIL_WEBHOOK_URL:'',MAIL_WEBHOOK_TOKEN:''});
+  data=(await req('/api/transactions')).data;assert.equal(data.rules.length,1);
+  await req('/api/transactions/bulk-category',{ids:[id],category:'Transport',rememberRule:true});
+  data=(await req('/api/transactions')).data;assert.equal(data.rules.length,1);assert.equal(data.rules[0].category,'Transport');
+  assert.equal((await req('/api/transactions/rules/'+data.rules[0].id,null,'DELETE',other)).status,404);
+  assert.equal((await req('/api/transactions/rules/'+data.rules[0].id,null,'DELETE')).status,200);
+  assert.equal((await req('/api/transactions/preview',{accountId:bankId,rows:future})).data.rows[0].category,'Food & groceries');
+  const bankImport=data.imports.find(i=>i.fileName==='bank.csv');await req('/api/transactions/imports/'+bankImport.id,null,'DELETE');
+  assert.ok((await req('/api/transactions')).data.transactions.some(t=>t.id===id),'removing an import keeps manual records');
+ }finally{if(run)await run.stop();await rm(dir,{recursive:true,force:true});}
+});

@@ -47,6 +47,54 @@ const mainCsv=['Извлечение по сметка BG00TEST','Период: 
  '32.08.2026;Грешен ред;TEST;1,00;;EUR','Крайно салдо;;;;;'].join('\r\n');
 const cardCsv='A;B;C;D\n20.06.2026;Incoming payment;150,00;EUR\n01.08.2026;Kaufland Mladost;-32,40;EUR\n03.08.2026;Vivacom internet;-25,00;EUR\n10.08.2026;Kafe Sofia;-4,50;EUR\n';
 
+test('manual entry, bulk rules, freshness and pagination work through the real interface',{timeout:90000},async()=>{
+ const dir=await mkdtemp(path.join(os.tmpdir(),'rr-tools-e2e-')),port=await freePort(),base=`http://127.0.0.1:${port}`;let server;
+ try{
+  server=await launch({DATA_DIR:dir,PORT:String(port),APP_ORIGIN:base,MAIL_WEBHOOK_URL:'',MAIL_WEBHOOK_TOKEN:''});
+  const response=await fetch(base+'/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Tools Tester',email:'tools-e2e@example.test',password:'TestPassword123!'})});
+  const who={cookie:response.headers.get('set-cookie').split(';')[0],user:(await response.json()).user};
+  const api=async(p,body)=>{const r=await fetch(base+p,{method:body?'POST':'GET',headers:{Cookie:who.cookie,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});assert.equal(r.status,200);return r.json();};
+  let t=tab(base,who);await t.open();await t.click('[data-add-transaction]');
+  const form=t.$('[data-manual-transaction-form]');
+  form.querySelector('[name="accountName"]').value='Cash';form.querySelector('[name="date"]').value='2026-09-11';form.querySelector('[name="description"]').value='Corner Cafe';form.querySelector('[name="amount"]').value='18.50';choose(form.querySelector('[name="category"]'),'Other');
+  form.dispatchEvent(new t.Event('submit',{cancelable:true}));await t.idle();
+  assert.match(t.toasts(),/Transaction added/);assert.equal(t.rows(),1);assert.equal(t.spending('EUR'),'€18.50');assert.match(t.$('[data-tx-last-import]').textContent,/No imports yet/);
+  // 503 imported rows ensure pagination reaches beyond the previous 500-row cap.
+  const rows=Array.from({length:503},(_,i)=>({date:`2026-08-${String(i%28+1).padStart(2,'0')}`,description:'Corner Cafe '+i,amount:-(i+1)/100,currency:'EUR'}));
+  rows.push({date:'2026-08-30',description:'USD purchase',amount:-3,currency:'USD'});
+  const result=await api('/api/transactions/import',{accountName:'Bank',fileName:'many.csv',rows});
+  t=tab(base,who);await t.open();const total=t.spending('EUR');
+  assert.equal(t.$('[data-tx-count]').textContent,'505');assert.equal(t.rows(),25);assert.equal(t.spending('USD'),'US$3.00');
+  assert.equal(total,'€1,286.06');
+  await t.click('[data-tx-page="2"]');assert.equal(t.$('[data-tx-page-number]').textContent,'2');assert.equal(t.spending('EUR'),total);
+  const size=t.$('[data-tx-page-size]');choose(size,'50');size.dispatchEvent(new t.Event('change'));
+  assert.equal(t.rows(),50);assert.equal(t.$('[data-tx-page-number]').textContent,'1');
+  // Check every page is reachable and no row is lost or repeated.
+  const seen=new Set(t.$$('[data-tx]').map(r=>r.dataset.tx));
+  for(let p=2;p<=11;p++){await t.click(`[data-tx-page="${p}"]`);for(const row of t.$$('[data-tx]')){assert.ok(!seen.has(row.dataset.tx));seen.add(row.dataset.tx);}assert.equal(t.spending('EUR'),total);}
+  assert.equal(seen.size,505);assert.equal(t.rows(),5);
+  const sort=t.$('[data-tx-sort]');choose(sort,'amount-asc');sort.dispatchEvent(new t.Event('change'));
+  let saved=await api('/api/transactions');assert.equal(t.$$('[data-tx]')[0].dataset.tx,saved.transactions.find(x=>x.amount===-18.5).id);
+  choose(t.$('[data-tx-sort]'),'amount-desc');t.$('[data-tx-sort]').dispatchEvent(new t.Event('change'));
+  assert.equal(t.$$('[data-tx]')[0].dataset.tx,saved.transactions.find(x=>x.amount===-0.01).id);
+  assert.match(t.$('[data-tx-last-bank-date]').textContent,/Aug 30|30 Aug/);
+  t.filter('account',result.bankAccountId);assert.match(t.$('[data-tx-last-date]').textContent,/Aug 30|30 Aug/);
+  const search=t.$('[data-global-search]');search.value='Corner Cafe';search.dispatchEvent(new t.Event('input'));
+  const ids=t.$$('[data-tx-select]').slice(0,2).map(b=>b.dataset.txSelect);
+  for(const id of ids){const box=t.$(`[data-tx-select="${id}"]`);box.checked=true;box.dispatchEvent(new t.Event('change'));}
+  assert.equal(t.$('[data-tx-selected-count]').textContent,'2');await t.click('[data-tx-bulk]');
+  const bulk=t.$('[data-bulk-category-form]');choose(bulk.querySelector('[name="category"]'),'Health');bulk.querySelector('[name="rememberRule"]').checked=true;
+  bulk.dispatchEvent(new t.Event('submit',{cancelable:true}));await t.idle();assert.match(t.toasts(),/Categories updated/);
+  saved=await api('/api/transactions');assert.equal(saved.rules.length,1);assert.equal(saved.transactions.filter(x=>x.category==='Health').length,2);
+  const preview=await api('/api/transactions/preview',{accountId:result.bankAccountId,rows:[{date:'2026-09-20',description:'Corner Cafe',amount:-9,currency:'EUR'}]});assert.equal(preview.rows[0].category,'Health');
+  t=tab(base,who);await t.open();assert.ok(t.$('.tx-rules'));assert.equal(t.$('[data-tx-selected-count]').textContent,'0');
+  const box=t.$('[data-tx-select-page]');box.checked=true;box.dispatchEvent(new t.Event('change'));assert.equal(t.$('[data-tx-selected-count]').textContent,'25');
+  t.filter('category','Transport');assert.equal(t.rows(),0);assert.equal(t.$('[data-tx-selected-count]').textContent,'0');assert.equal(t.$('[data-tx-bulk]').disabled,true);
+  await t.click('[data-remove-category-rule]');await t.click('[data-confirm-remove-rule]');assert.equal((await api('/api/transactions')).rules.length,0);
+  assert.equal((await api('/api/transactions')).transactions.filter(x=>x.category==='Health').length,2);
+ }finally{if(server)await server.stop();await rm(dir,{recursive:true,force:true});}
+});
+
 test('transactions workflow end to end with the real UI code, API and database',{timeout:90000},async()=>{
  const dir=await mkdtemp(path.join(os.tmpdir(),'rr-e2e-')),port=await freePort(),base=`http://127.0.0.1:${port}`;let server;
  try{

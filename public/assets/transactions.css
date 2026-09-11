@@ -47,6 +47,23 @@
 .tx-table-foot{margin:0;padding:12px;font-size:.85rem;color:var(--ink-2);border-top:1px solid var(--border)}
 .tx-table .empty-state{padding:28px}
 
+/* Transaction tools keep the existing data-* hooks independent of layout. */
+.tx-freshness{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:16px;margin-bottom:14px}
+.tx-freshness>div{display:grid;gap:5px}.tx-freshness span,.tx-freshness p{font-size:.875rem;color:var(--ink-2)}
+.tx-freshness strong{font-size:.9rem}.tx-freshness p{grid-column:1/-1;margin:0}
+.tx-list-toolbar,.tx-bulk-bar,.tx-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:12px 0}
+.tx-list-controls,.tx-pagination>div{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.tx-list-controls label{display:grid;gap:4px;font-size:.875rem;color:var(--ink-2)}
+.tx-list-controls .input{padding:8px 10px;min-height:40px}
+.tx-bulk-bar{justify-content:flex-start;background:var(--surface-2);border-radius:12px;padding:10px 12px;font-size:.875rem}
+.tx-pagination{padding:12px;margin:0;border-top:1px solid var(--border);font-size:.875rem}
+.tx-pagination button:disabled{opacity:.5;cursor:default}
+.tx-table input[type=checkbox],.tx-check-label input{width:18px;height:18px;accent-color:var(--primary);flex-shrink:0}
+.tx-check-label{display:flex;gap:10px;align-items:flex-start;font-size:.9rem}
+.tx-manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tx-rules summary{cursor:pointer;font-weight:700;padding:4px 0}.tx-rules p{font-size:.875rem}
+.tx-summary{align-items:start}
+
 /* Notes on review rows */
 .tx-note{display:block;font-size:.78rem;color:var(--ink-2)}
 .tx-note.warn{color:#9a6700}
@@ -88,6 +105,9 @@ tr.tx-excluded td:not(:first-child){opacity:.55}
 
 /* Phones: tables become stacked cards, controls take the full width */
 @media(max-width:620px){
+  .tx-freshness{grid-template-columns:1fr}.tx-manual-grid{grid-template-columns:1fr}
+  .tx-list-controls{width:100%}.tx-list-controls label{flex:1;min-width:130px}
+  .tx-pagination>div{width:100%;justify-content:space-between}
   .tx-actions{width:100%}.tx-actions .btn{flex:1}
   .tx-page .dash-heading>.tx-actions{display:flex}
   .tx-filters{grid-template-columns:1fr 1fr}

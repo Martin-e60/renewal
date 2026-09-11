@@ -46,6 +46,53 @@ Saving…|Wird gespeichert…|Guardando…
 Add|Hinzufügen|Añadir
 
 Transactions|Transaktionen|Transacciones
+Add transaction|Transaktion hinzufügen|Añadir transacción
+Save transaction|Transaktion speichern|Guardar transacción
+Transaction added.|Transaktion hinzugefügt.|Transacción añadida.
+Manual|Manuell|Manual
+Automatic|Automatisch|Automática
+Direction|Richtung|Dirección
+e.g. Cash wallet|z. B. Bargeld|p. ej. Efectivo
+Enter a positive amount.|Gib einen positiven Betrag ein.|Introduce un importe positivo.
+Invalid transaction request.|Ungültige Transaktionsanfrage.|Solicitud de transacción no válida.
+The amount does not match the transaction type.|Der Betrag passt nicht zum Transaktionstyp.|El importe no coincide con el tipo de transacción.
+Select|Auswählen|Seleccionar
+Select transaction|Transaktion auswählen|Seleccionar transacción
+Select expenses and refunds on this page|Ausgaben und Erstattungen auf dieser Seite auswählen|Seleccionar gastos y reembolsos de esta página
+selected on this page|auf dieser Seite ausgewählt|seleccionadas en esta página
+selected transactions|ausgewählte Transaktionen|transacciones seleccionadas
+Change category|Kategorie ändern|Cambiar categoría
+Clear selection|Auswahl aufheben|Borrar selección
+Remember this category for future transactions from these merchants|Diese Kategorie für künftige Transaktionen dieser Händler merken|Recordar esta categoría para futuras transacciones de estos comercios
+Existing unselected transactions will not change. Saving a rule replaces any previous rule for the same merchant.|Nicht ausgewählte Transaktionen bleiben unverändert. Eine neue Regel ersetzt die bisherige Regel für denselben Händler.|Las transacciones no seleccionadas no cambiarán. Guardar una regla sustituye la anterior del mismo comercio.
+Apply category|Kategorie anwenden|Aplicar categoría
+Categories updated.|Kategorien aktualisiert.|Categorías actualizadas.
+Select transactions to update.|Wähle die zu ändernden Transaktionen aus.|Selecciona las transacciones que quieras actualizar.
+Select only expenses and refunds for categorization.|Wähle nur Ausgaben und Erstattungen zur Kategorisierung aus.|Selecciona solo gastos y reembolsos para categorizar.
+Invalid rule choice.|Ungültige Regelauswahl.|Selección de regla no válida.
+Saved category rules|Gespeicherte Kategorieregeln|Reglas de categoría guardadas
+Rules apply to future transactions for these merchants. Removing a rule keeps existing categories.|Regeln gelten für künftige Transaktionen dieser Händler. Beim Entfernen bleiben bestehende Kategorien erhalten.|Las reglas se aplican a futuras transacciones de estos comercios. Al eliminarlas se mantienen las categorías existentes.
+Remove rule|Regel entfernen|Eliminar regla
+Remove rule?|Regel entfernen?|¿Eliminar regla?
+Existing categories will stay unchanged.|Bestehende Kategorien bleiben unverändert.|Las categorías existentes no cambiarán.
+Rule removed.|Regel entfernt.|Regla eliminada.
+Category rule not found.|Kategorieregel nicht gefunden.|Regla de categoría no encontrada.
+Last import|Letzter Import|Última importación
+No imports yet|Noch keine Importe|Todavía no hay importaciones
+Latest imported transaction|Neueste importierte Transaktion|Transacción importada más reciente
+Latest transaction including manual entries|Neueste Transaktion einschließlich manueller Einträge|Transacción más reciente, incluidas las manuales
+For the selected account, regardless of date and category filters. New bank payments appear after another import.|Für die Kontoauswahl, unabhängig von Datums- und Kategoriefiltern. Neue Bankzahlungen erscheinen nach einem weiteren Import.|Para la selección de cuentas, independientemente de los filtros de fecha y categoría. Los nuevos pagos bancarios aparecen tras otra importación.
+Sort by|Sortieren nach|Ordenar por
+Date: newest first|Datum: neueste zuerst|Fecha: más recientes primero
+Date: oldest first|Datum: älteste zuerst|Fecha: más antiguas primero
+Amount: low to high|Betrag: aufsteigend|Importe: de menor a mayor
+Amount: high to low|Betrag: absteigend|Importe: de mayor a menor
+Amounts are sorted within each currency.|Beträge werden innerhalb jeder Währung sortiert.|Los importes se ordenan dentro de cada moneda.
+Rows per page|Zeilen pro Seite|Filas por página
+Transaction pages|Transaktionsseiten|Páginas de transacciones
+Previous|Zurück|Anterior
+Next|Weiter|Siguiente
+Page|Seite|Página
 transactions|Transaktionen|transacciones
 Loading transactions…|Transaktionen werden geladen…|Cargando transacciones…
 Import statement|Kontoauszug importieren|Importar extracto

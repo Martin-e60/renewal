@@ -17,6 +17,9 @@ export function createTransactions({db, json, getCurrentUser, readBody, accountD
   CREATE TABLE IF NOT EXISTS subscription_series(user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,series_key TEXT NOT NULL,status TEXT NOT NULL,merchant TEXT NOT NULL,currency TEXT NOT NULL,cycle TEXT,category TEXT,amount_cents INTEGER,subscription_uid TEXT,updated_at INTEGER NOT NULL,PRIMARY KEY(user_id,series_key))`.split(';').map(v => v.trim()).filter(Boolean)) db.exec(statement);
 
   const accountsOf = userId => db.prepare('SELECT id,name,created_at AS createdAt FROM bank_accounts WHERE user_id=? ORDER BY name').all(userId);
+  // Personal merchant rules only affect future analysis; saved transactions keep their edits.
+  db.exec('CREATE TABLE IF NOT EXISTS transaction_category_rules(id TEXT PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,merchant_key TEXT NOT NULL,merchant TEXT NOT NULL,category TEXT NOT NULL,updated_at INTEGER NOT NULL,UNIQUE(user_id,merchant_key))');
+  const rulesOf = userId => db.prepare('SELECT id,merchant_key AS merchantKey,merchant,category FROM transaction_category_rules WHERE user_id=? ORDER BY merchant').all(userId);
   const importsOf = userId => db.prepare('SELECT id,account_id AS accountId,file_name AS fileName,imported,skipped,created_at AS createdAt FROM statement_imports WHERE user_id=? ORDER BY created_at DESC LIMIT 50').all(userId);
   const transactionsOf = userId => db.prepare('SELECT id,account_id AS accountId,import_id AS importId,date,description,merchant,merchant_key AS merchantKey,amount_cents AS amountCents,currency,kind,category FROM transactions WHERE user_id=? ORDER BY date DESC,created_at DESC,id')
     .all(userId).map(({amountCents, ...t}) => ({...t, amount:Number(amountCents) / 100}));
@@ -63,6 +66,7 @@ export function createTransactions({db, json, getCurrentUser, readBody, accountD
   // Categories, own-account transfers and duplicates for rows that are not saved yet.
   function analyze(userId, account, rows) {
     const bases = fingerprintBases(rows);
+    const rules = new Map(rulesOf(userId).map(r => [r.merchantKey, r.category]));
     const existing = account.id ? db.prepare('SELECT fingerprint,date,description,amount_cents AS amountCents,currency FROM transactions WHERE user_id=? AND account_id=?').all(userId, account.id) : [];
     const saved = new Set(existing.map(t => t.fingerprint)), sameAmount = groupBy(existing, t => `${t.currency}|${t.amountCents}`);
     const others = db.prepare('SELECT t.id,t.date,t.amount_cents AS amountCents,t.currency,a.name AS accountName FROM transactions t JOIN bank_accounts a ON a.id=t.account_id WHERE t.user_id=? AND t.account_id<>?').all(userId, account.id || '');
@@ -73,7 +77,7 @@ export function createTransactions({db, json, getCurrentUser, readBody, accountD
       const transfer = analysis.kind !== 'refund' ? (otherAmount.get(`${row.currency}|${-amountCents}`) || []).find(t => Math.abs(dayDifference(t.date, row.date)) <= 3) : null;
       const kind = transfer ? 'transfer' : analysis.kind, imported = saved.has(fingerprint);
       const similar = imported ? null : (sameAmount.get(`${row.currency}|${amountCents}`) || []).find(t => Math.abs(dayDifference(t.date, row.date)) <= 1);
-      return {line:row.line, date:row.date, description:row.description, note:row.note, amount:row.amount, currency:row.currency, merchant:analysis.merchant, merchantKey:analysis.merchantKey, kind, category:isSpending(kind) ? analysis.category : null, fingerprint,
+      return {line:row.line, date:row.date, description:row.description, note:row.note, amount:row.amount, currency:row.currency, merchant:analysis.merchant, merchantKey:analysis.merchantKey, kind, category:isSpending(kind) ? rules.get(analysis.merchantKey) || analysis.category : null, fingerprint,
         duplicate:imported ? 'imported' : similar ? 'possible' : bases[i].occurrence > 0 ? 'file' : null, duplicateOf:similar ? {date:similar.date, description:similar.description} : null, transferAccount:transfer?.accountName || null, transferWith:transfer?.id || null, include:!imported && !similar};
     });
   }
@@ -167,6 +171,55 @@ export function createTransactions({db, json, getCurrentUser, readBody, accountD
     return {id, kind, category};
   }
 
+  function addManualTransaction(user, body) {
+    const id = String(body.requestId || '');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw Error('Invalid transaction request.');
+    const [row] = cleanRows([body]);
+    if (!KINDS.includes(body.kind)) throw Error('Choose a valid type.');
+    if ((row.kind === 'expense' && row.amount >= 0) || (['income','refund'].includes(row.kind) && row.amount <= 0)) throw Error('The amount does not match the transaction type.');
+    if (isSpending(row.kind) && body.category !== undefined && !CATEGORIES.includes(body.category)) throw Error('Choose a valid category.');
+    db.exec('BEGIN');
+    try {
+      const account = resolveAccount(user.id, body, true);
+      const existing = db.prepare('SELECT id FROM transactions WHERE user_id=? AND account_id=? AND fingerprint=?').get(user.id, account.id, 'manual:' + id);
+      if (existing) { db.exec('COMMIT'); return {id:existing.id, bankAccountId:account.id, created:false}; }
+      const analysis = analyzeTransaction(row), rule = rulesOf(user.id).find(r => r.merchantKey === analysis.merchantKey);
+      const category = isSpending(row.kind) ? row.category || rule?.category || analysis.category || 'Other' : null;
+      const transactionId = crypto.randomUUID();
+      db.prepare('INSERT INTO transactions(id,user_id,account_id,import_id,fingerprint,date,description,merchant,merchant_key,amount_cents,currency,kind,category,created_at) VALUES(?,?,?,NULL,?,?,?,?,?,?,?,?,?,?)')
+        .run(transactionId, user.id, account.id, 'manual:' + id, row.date, row.description, analysis.merchant, analysis.merchantKey, cents(row.amount), row.currency, row.kind, category, Date.now());
+      db.exec('COMMIT');
+      return {id:transactionId, bankAccountId:account.id, created:true};
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+  }
+
+  function bulkCategory(user, body) {
+    if (!Array.isArray(body.ids) || !body.ids.length || body.ids.length > MAX_IMPORT_ROWS || body.ids.some(id => typeof id !== 'string')) throw Error('Select transactions to update.');
+    if (!CATEGORIES.includes(body.category)) throw Error('Choose a valid category.');
+    if (body.rememberRule !== undefined && typeof body.rememberRule !== 'boolean') throw Error('Invalid rule choice.');
+    const ids = [...new Set(body.ids)];
+    db.exec('BEGIN');
+    try {
+      const get = db.prepare('SELECT id,kind,merchant,merchant_key AS merchantKey FROM transactions WHERE id=? AND user_id=?');
+      const rows = ids.map(id => get.get(id, user.id));
+      if (rows.some(r => !r)) { const e = Error('Transaction not found.'); e.status = 404; throw e; }
+      if (rows.some(r => !isSpending(r.kind))) throw Error('Select only expenses and refunds for categorization.');
+      const update = db.prepare('UPDATE transactions SET category=? WHERE id=? AND user_id=?');
+      const saveRule = db.prepare('INSERT INTO transaction_category_rules(id,user_id,merchant_key,merchant,category,updated_at) VALUES(?,?,?,?,?,?) ON CONFLICT(user_id,merchant_key) DO UPDATE SET merchant=excluded.merchant,category=excluded.category,updated_at=excluded.updated_at');
+      const merchants = new Map(rows.map(r => [r.merchantKey, r.merchant]));
+      for (const row of rows) update.run(body.category, row.id, user.id);
+      if (body.rememberRule) for (const [key, merchant] of merchants) saveRule.run(crypto.randomUUID(), user.id, key, merchant, body.category, Date.now());
+      db.exec('COMMIT');
+      return {updated:ids.length, rulesSaved:body.rememberRule ? merchants.size : 0};
+    } catch (e) { db.exec('ROLLBACK'); throw e; }
+  }
+
+  function removeRule(user, id) {
+    const removed = Number(db.prepare('DELETE FROM transaction_category_rules WHERE id=? AND user_id=?').run(id, user.id).changes);
+    if (!removed) { const e = Error('Category rule not found.'); e.status = 404; throw e; }
+    return {removed};
+  }
+
   function removeImport(user, id) {
     if (!db.prepare('SELECT 1 FROM statement_imports WHERE id=? AND user_id=?').get(id, user.id)) { const e = Error('Import not found.'); e.status = 404; throw e; }
     db.exec('BEGIN');
@@ -185,13 +238,18 @@ export function createTransactions({db, json, getCurrentUser, readBody, accountD
     try {
       if (url.pathname === '/api/transactions' && req.method === 'GET') {
         const transactions = transactionsOf(user.id);
-        json(res, 200, {accounts:accountsOf(user.id), transactions, series:seriesOf(user.id, transactions), imports:importsOf(user.id)});
+        const freshness = db.prepare('SELECT a.id AS accountId,(SELECT MAX(created_at) FROM statement_imports WHERE user_id=a.user_id AND account_id=a.id) AS lastImportAt,(SELECT MAX(date) FROM transactions WHERE user_id=a.user_id AND account_id=a.id AND import_id IS NOT NULL) AS lastImportedTransactionDate,(SELECT MAX(date) FROM transactions WHERE user_id=a.user_id AND account_id=a.id) AS lastTransactionDate FROM bank_accounts a WHERE a.user_id=?').all(user.id);
+        json(res, 200, {accounts:accountsOf(user.id), transactions, series:seriesOf(user.id, transactions), imports:importsOf(user.id), rules:rulesOf(user.id), freshness});
         return true;
       }
       const importMatch = url.pathname.match(/^\/api\/transactions\/imports\/([0-9a-f-]{36})$/), itemMatch = url.pathname.match(/^\/api\/transactions\/([0-9a-f-]{36})$/);
+      const ruleMatch = url.pathname.match(/^\/api\/transactions\/rules\/([0-9a-f-]{36})$/);
+      if (ruleMatch && req.method === 'DELETE') { json(res, 200, removeRule(user, ruleMatch[1])); return true; }
       if (importMatch && req.method === 'DELETE') { json(res, 200, removeImport(user, importMatch[1])); return true; }
       if (!['POST','PATCH'].includes(req.method)) { json(res, 405, {error:'Method not allowed.'}); return true; }
       const body = await readBody(req, user.id);
+      if (url.pathname === '/api/transactions/manual' && req.method === 'POST') { json(res, 200, addManualTransaction(user, body)); return true; }
+      if (url.pathname === '/api/transactions/bulk-category' && req.method === 'POST') { json(res, 200, bulkCategory(user, body)); return true; }
       if (url.pathname === '/api/transactions/preview' && req.method === 'POST') { json(res, 200, preview(user, body)); return true; }
       if (url.pathname === '/api/transactions/import' && req.method === 'POST') { json(res, 200, importStatement(user, body)); return true; }
       if (url.pathname === '/api/transactions/series' && req.method === 'POST') { json(res, 200, decideSeries(user, body)); return true; }
