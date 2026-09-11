@@ -20,7 +20,15 @@ const PORT = Number(process.env.PORT || 3000);
 const APP_ORIGIN = new URL(process.env.APP_ORIGIN || (process.env.CODESPACE_NAME ? `https://${process.env.CODESPACE_NAME}-${PORT}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN || 'app.github.dev'}` : `http://localhost:${PORT}`)).origin;
 const ALLOWED_ORIGINS = new Set([APP_ORIGIN, ...(!process.env.APP_ORIGIN && !process.env.CODESPACE_NAME ? [`http://127.0.0.1:${PORT}`] : []), ...(process.env.ALLOWED_ORIGINS || '').split(',').filter(Boolean).map(v=>new URL(v.trim()).origin)]);
 const RESEND_READY=!!(process.env.RESEND_API_KEY&&process.env.MAIL_FROM);
-const PASSWORD_RESET_TEMPLATE_ID=String(process.env.RESEND_PASSWORD_RESET_TEMPLATE_ID||'').trim();
+const RESEND_TEMPLATE_IDS=Object.freeze({
+  welcome:String(process.env.RESEND_WELCOME_TEMPLATE_ID||'duedar-welcome').trim(),
+  passwordChanged:String(process.env.RESEND_PASSWORD_CHANGED_TEMPLATE_ID||'duedar-password-changed').trim(),
+  confirmNewEmailAddress:String(process.env.RESEND_CONFIRM_NEW_EMAIL_TEMPLATE_ID||'duedar-confirm-new-email-address').trim(),
+  renewalReminder:String(process.env.RESEND_RENEWAL_REMINDER_TEMPLATE_ID||'duedar-renewal-reminder').trim(),
+  passwordReset:String(process.env.RESEND_PASSWORD_RESET_TEMPLATE_ID||'duedar-password-reset').trim(),
+  confirmReminderEmail:String(process.env.RESEND_CONFIRM_REMINDER_EMAIL_TEMPLATE_ID||'duedar-confirm-reminder-email').trim()
+});
+const WELCOME_MAIL_FROM=String(process.env.MAIL_FROM_WELCOME||process.env.MAIL_FROM||'').trim();
 const MAIL_READY = RESEND_READY || !!(process.env.MAIL_WEBHOOK_URL && process.env.MAIL_WEBHOOK_TOKEN);
 if (process.env.MAIL_WEBHOOK_URL && new URL(process.env.MAIL_WEBHOOK_URL).protocol !== 'https:' && process.env.NODE_ENV === 'production') throw new Error('Mail webhook must use HTTPS');
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -250,8 +258,17 @@ async function handleApi(req, res, url) {
     try {
       const result = db.prepare('INSERT INTO users (name, email, password_hash, created_at) VALUES (?, ?, ?, ?)')
         .run(name, email, hashPassword(password), Date.now());
-      const token = createSession(Number(result.lastInsertRowid));
-      return json(res, 201, { user: { id: Number(result.lastInsertRowid), name, email } }, { 'Set-Cookie': sessionCookie(token) });
+      const userId=Number(result.lastInsertRowid);
+      const token = createSession(userId);
+      await sendOptionalMail(
+        email,
+        'Welcome to Duedar',
+        `Welcome to Duedar. Add your first renewal at ${APP_ORIGIN}/dashboard/subscriptions.`,
+        crypto.randomUUID(),
+        resendTemplate(RESEND_TEMPLATE_IDS.welcome),
+        WELCOME_MAIL_FROM
+      );
+      return json(res, 201, { user: { id: userId, name, email } }, { 'Set-Cookie': sessionCookie(token) });
     } catch (error) {
       if (String(error.message).includes('UNIQUE')) return json(res, 409, { error: 'An account with this email already exists.' });
       console.error(error);
@@ -307,12 +324,9 @@ async function handleApi(req, res, url) {
       db.prepare('INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)')
         .run(user.id, hashToken(token), now + RESET_TTL_MS, now);
       const resetUrl=`${APP_ORIGIN}/reset-password?token=${encodeURIComponent(token)}`;
-const resetText=`Use this link within 30 minutes: ${resetUrl}`;
-const resetTemplate=RESEND_READY&&PASSWORD_RESET_TEMPLATE_ID
-  ? {id:PASSWORD_RESET_TEMPLATE_ID,variables:{RESET_URL:resetUrl}}
-  : null;
-
-try { await sendMail(email, 'Reset your Duedar password', resetText, crypto.randomUUID(), resetTemplate); }
+      const resetText=`Use this link within 30 minutes: ${resetUrl}`;
+      const resetTemplate=resendTemplate(RESEND_TEMPLATE_IDS.passwordReset,{RESET_URL:resetUrl});
+      try { await sendMail(email, 'Reset your Duedar password', resetText, crypto.randomUUID(), resetTemplate); }
       catch { db.prepare('DELETE FROM password_resets WHERE token_hash = ?').run(hashToken(token)); return json(res,503,{error:'Email delivery is temporarily unavailable. Try again later.'}); }
     }
     return json(res, 200, {message:'If an account exists for that email, a reset link has been sent.'});
@@ -326,8 +340,9 @@ try { await sendMail(email, 'Reset your Duedar password', resetText, crypto.rand
     if (!token || !validPassword(password)) return json(res, 400, { error: 'Invalid reset link or password.' });
     const now = Date.now();
     const reset = db.prepare(`
-      SELECT id, user_id FROM password_resets
-      WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?
+      SELECT password_resets.id, password_resets.user_id, users.email
+      FROM password_resets JOIN users ON users.id = password_resets.user_id
+      WHERE password_resets.token_hash = ? AND password_resets.used_at IS NULL AND password_resets.expires_at > ?
     `).get(hashToken(token), now);
     if (!reset) return json(res, 400, { error: 'This reset link is invalid or has expired.' });
     db.exec('BEGIN');
@@ -341,6 +356,13 @@ try { await sendMail(email, 'Reset your Duedar password', resetText, crypto.rand
       console.error(error);
       return json(res, 500, { error: 'Could not update your password.' });
     }
+    await sendOptionalMail(
+      reset.email,
+      'Your Duedar password was changed',
+      `Your Duedar password was changed. If you did not make this change, secure your account at ${APP_ORIGIN}/forgot-password.`,
+      crypto.randomUUID(),
+      resendTemplate(RESEND_TEMPLATE_IDS.passwordChanged)
+    );
     return json(res, 200, { ok: true }, {'Set-Cookie':clearSessionCookie()});
   }
 
@@ -460,7 +482,18 @@ function checkedSubscriptions(items) {
     return {uid,id:String(s.id||'custom').slice(0,40),name,customName,category,price:Math.round(s.price*100)/100,cycle:s.cycle,renewalDate:s.renewalDate,lastUsedDate:s.lastUsedDate||null,lastReviewedDate:s.lastReviewedDate||null,priceHistory,color:/^#[0-9a-f]{6}$/i.test(s.color)?s.color:'#6956E8',logo:String(s.logo||name[0]).slice(0,12)};
   });
 }
-async function sendMail(to, subject, text, idempotencyKey = crypto.randomUUID(), template = null) {
+function resendTemplate(id,variables=null){
+  if(!RESEND_READY||!id)return null;
+  return variables?{id,variables}:{id};
+}
+
+async function sendOptionalMail(to,subject,text,idempotencyKey=crypto.randomUUID(),template=null,from=process.env.MAIL_FROM){
+  if(!MAIL_READY)return;
+  try{await sendMail(to,subject,text,idempotencyKey,template,from);}
+  catch(error){console.error('Optional email could not be delivered.',error);}
+}
+
+async function sendMail(to, subject, text, idempotencyKey = crypto.randomUUID(), template = null, from = process.env.MAIL_FROM) {
   if (!MAIL_READY) throw Error('Email delivery is not configured.');
 
   const usingResend = RESEND_READY;
@@ -470,8 +503,8 @@ async function sendMail(to, subject, text, idempotencyKey = crypto.randomUUID(),
 
   const body = usingResend
     ? template
-      ? { from: process.env.MAIL_FROM, to: [to], subject, template }
-      : { from: process.env.MAIL_FROM, to: [to], subject, text }
+      ? { from, to: [to], subject, template }
+      : { from, to: [to], subject, text }
     : { to, subject, text };
 
   const token = usingResend
@@ -509,7 +542,15 @@ async function handleRecords(req,res,url) {
         db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(hashPassword(b.password),user.id);
         db.prepare('DELETE FROM sessions WHERE user_id=?').run(user.id);
         db.prepare('DELETE FROM password_resets WHERE user_id=?').run(user.id);
-        const token=createSession(user.id);db.exec('COMMIT');json(res,200,{ok:true},{'Set-Cookie':sessionCookie(token)});
+        const token=createSession(user.id);db.exec('COMMIT');
+        await sendOptionalMail(
+          user.email,
+          'Your Duedar password was changed',
+          `Your Duedar password was changed. If you did not make this change, secure your account at ${APP_ORIGIN}/forgot-password.`,
+          crypto.randomUUID(),
+          resendTemplate(RESEND_TEMPLATE_IDS.passwordChanged)
+        );
+        json(res,200,{ok:true},{'Set-Cookie':sessionCookie(token)});
       }catch(e){db.exec('ROLLBACK');throw e;}return true;
     }
     if(url.pathname==='/api/data'&&req.method==='GET'){json(res,200,{accountId:user.id,...data});return true;}
@@ -532,7 +573,14 @@ async function handleRecords(req,res,url) {
       if(rateLimited(`verify:${user.id}`,3)){json(res,429,{error:'Too many requests. Try again later.'});return true;}
       const token=crypto.randomBytes(32).toString('base64url');
       db.prepare('INSERT INTO email_confirmations(token_hash,user_id,expires_at) VALUES(?,?,?)').run(hashToken(token),user.id,Date.now()+1800000);
-      await sendMail(user.email,'Confirm renewal reminders',`To verify your email, sign in and open ${APP_ORIGIN}/dashboard/settings?verify=${token}. The link expires in 30 minutes. You can then enable email reminders in Settings.`);
+      const verifyUrl=`${APP_ORIGIN}/dashboard/settings?verify=${encodeURIComponent(token)}`;
+      await sendMail(
+        user.email,
+        'Confirm your Duedar reminder email',
+        `To verify your email, sign in and open ${verifyUrl}. The link expires in 30 minutes. You can then enable email reminders in Settings.`,
+        crypto.randomUUID(),
+        resendTemplate(RESEND_TEMPLATE_IDS.confirmReminderEmail,{VERIFY_URL:verifyUrl})
+      );
       json(res,200,{ok:true});return true;
     }
     if(url.pathname==='/api/reminders/confirm'&&req.method==='POST'){
@@ -582,7 +630,21 @@ export async function deliverReminders(){
         const key=`${s.uid}:${due}`;
         if(db.prepare('SELECT 1 FROM reminder_deliveries WHERE user_id=? AND delivery_key=?').get(row.user_id,key))continue;
         try{
-          await sendMail(row.email,`Renewal reminder: ${s.name}`,`${s.name}${s.customName?' ('+s.customName+')':''}: EUR ${s.price.toFixed(2)} is scheduled for ${due}. Review it at ${APP_ORIGIN}/dashboard/subscriptions?subscription=${encodeURIComponent(s.uid)}`,`${row.user_id}:${key}`);
+          const serviceName=`${s.name}${s.customName?' ('+s.customName+')':''}`;
+          const subscriptionUrl=`${APP_ORIGIN}/dashboard/subscriptions?subscription=${encodeURIComponent(s.uid)}`;
+          const amount=`EUR ${s.price.toFixed(2)}`;
+          await sendMail(
+            row.email,
+            `Renewal reminder: ${s.name}`,
+            `${serviceName}: ${amount} is scheduled for ${due}. Review it at ${subscriptionUrl}`,
+            `${row.user_id}:${key}`,
+            resendTemplate(RESEND_TEMPLATE_IDS.renewalReminder,{
+              SERVICE_NAME:serviceName,
+              RENEWAL_DATE:due,
+              AMOUNT:amount,
+              SUBSCRIPTION_URL:subscriptionUrl
+            })
+          );
           db.prepare('INSERT OR IGNORE INTO reminder_deliveries(user_id,delivery_key,created_at) VALUES(?,?,?)').run(row.user_id,key,Date.now());
         }catch{console.error('A reminder could not be delivered; the next run will retry.');}
       }
@@ -671,7 +733,8 @@ async function handleAccount(req,res,url){
    if(db.prepare('SELECT 1 FROM users WHERE email=?').get(email))throw Error('This email address is already in use.');
    const token=crypto.randomBytes(32).toString('base64url'),tokenHash=hashToken(token);
    db.prepare('INSERT INTO pending_email_changes(token_hash,user_id,email,expires_at) VALUES(?,?,?,?)').run(tokenHash,user.id,email,Date.now()+1800000);
-   try{await sendMail(email,'Confirm your new Duedar email',`Sign in to your existing account and confirm your new address: ${APP_ORIGIN}/dashboard/settings?emailToken=${token}. The link expires in 30 minutes.`);}catch{db.prepare('DELETE FROM pending_email_changes WHERE token_hash=?').run(tokenHash);const e=Error('Email delivery is temporarily unavailable. Try again later.');e.status=503;throw e;}
+   const emailConfirmUrl=`${APP_ORIGIN}/dashboard/settings?emailToken=${encodeURIComponent(token)}`;
+   try{await sendMail(email,'Confirm your new Duedar email',`Sign in to your existing account and confirm your new address: ${emailConfirmUrl}. The link expires in 30 minutes.`,crypto.randomUUID(),resendTemplate(RESEND_TEMPLATE_IDS.confirmNewEmailAddress,{EMAIL_CONFIRM_URL:emailConfirmUrl}));}catch{db.prepare('DELETE FROM pending_email_changes WHERE token_hash=?').run(tokenHash);const e=Error('Email delivery is temporarily unavailable. Try again later.');e.status=503;throw e;}
    json(res,200,{ok:true});return true;
   }
   if(url.pathname==='/api/account/email/confirm'){
