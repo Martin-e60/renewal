@@ -1,5 +1,5 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {spawn} from 'node:child_process';import {once} from 'node:events';import http from 'node:http';import {mkdtemp,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import {dateKey} from '../public/assets/dates.js';
-const serverFile=new URL('../server/server.js',import.meta.url).pathname;
+import test from 'node:test';import assert from 'node:assert/strict';import {spawn} from 'node:child_process';import {once} from 'node:events';import http from 'node:http';import {mkdtemp,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import {dateKey} from '../public/assets/dates.js';import {fileURLToPath} from 'node:url';
+const serverFile=fileURLToPath(new URL('../server/server.js',import.meta.url));
 async function launch(env){const child=spawn(process.execPath,[serverFile],{env:{...process.env,...env},stdio:['ignore','pipe','pipe']});let logs='';child.stdout.on('data',b=>logs+=b);child.stderr.on('data',b=>logs+=b);await Promise.race([once(child.stdout,'data'),once(child,'exit').then(()=>{throw Error('Server exited: '+logs);})]);return {child,logs:()=>logs,stop:async()=>{child.kill();await once(child,'exit');}};}
 async function freePort(){const s=http.createServer();s.listen(0,'127.0.0.1');await once(s,'listening');const port=s.address().port;await new Promise(r=>s.close(r));return port;}
 test('account persistence, conflicts, document isolation and password security',{timeout:20000},async()=>{

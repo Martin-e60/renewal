@@ -1,5 +1,6 @@
 import http from 'node:http';
 import {createBilling} from './billing.js';
+import {createTransactions} from './transactions.js';
 import { readFile, stat, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -82,6 +83,7 @@ execSchema(`
 `);
 const loginAttempts = new Map();
 const billing=createBilling({db,appOrigin:APP_ORIGIN,json,getCurrentUser,readBody:readAuthenticatedBody,rateLimited});
+const transactionsApi=createTransactions({db,json,getCurrentUser,readBody:readAuthenticatedBody,accountData,writeAccount,checkedSubscriptions});
 const RESET_TTL_MS = 30 * 60 * 1000;
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -337,6 +339,7 @@ async function handleApi(req, res, url) {
 
   if(await handleUsage(req,res,url))return;
   if(await billing.handle(req,res,url))return;
+  if(await transactionsApi.handle(req,res,url))return;
   if(await handleAccount(req,res,url))return;
   const handled = await handleRecords(req,res,url);
   if(handled) return;
