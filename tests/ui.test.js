@@ -1,13 +1,13 @@
-import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFile} from 'node:fs/promises';import {parseHTML} from 'linkedom';import crypto from 'node:crypto';import * as dates from '../public/assets/dates.js';import {translateText} from '../public/assets/locales.js';
-const source=(await readFile(new URL('../public/assets/app.js',import.meta.url),'utf8')).replace(/^import .*;\n/gm,'').split('await loadSession();')[0];
+import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFile} from 'node:fs/promises';import {parseHTML} from 'linkedom';import crypto from 'node:crypto';import * as dates from '../public/assets/dates.js';import {translateText} from '../public/assets/locales.js';import * as transactions from '../public/assets/transactions.js';
+const source=(await readFile(new URL('../public/assets/app.js',import.meta.url),'utf8')).replace(/^import .*;\r?\n/gm,'').split('await loadSession();')[0];
 export function harness(){
  const {document,window}=parseHTML('<html><head><meta name="description"></head><body><div id="app"></div><div id="modal-root"></div><div id="toast-root"></div></body></html>');
- const stored=new Map(),calls=[];let data={version:0,subscriptions:[],settings:{timeZone:'Europe/Sofia',reminderDays:3,emailVerified:false,emailReminders:false},proPreview:false};
+ const stored=new Map(),calls=[],txImports=[],tx={accounts:[],transactions:[],series:[],imports:[]};let data={version:0,subscriptions:[],settings:{timeZone:'Europe/Sofia',reminderDays:3,emailVerified:false,emailReminders:false},proPreview:false};
  class FormData {constructor(form){this.values=new Map([...form.querySelectorAll('input,select,textarea')].filter(el=>el.name&&!el.disabled&&(el.type!=='checkbox'||el.checked)).map(el=>[el.name,el.value]));}get(k){return this.values.get(k)??null;}has(k){return this.values.has(k);}[Symbol.iterator](){return this.values.entries();}}
- const context={...dates,translateText,document,window:{addEventListener:window.addEventListener.bind(window),scrollTo:()=>{}},NodeFilter:{SHOW_TEXT:4},localStorage:{getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)},console,Intl,Date,URL,URLSearchParams,crypto,FormData,TextEncoder,Blob,setTimeout:()=>0,setInterval:()=>0,requestAnimationFrame:cb=>cb(),location:new URL('http://localhost:3000/dashboard'),fetch:async(url,options={})=>{
+ const context={...dates,...transactions,translateText,document,window:{addEventListener:window.addEventListener.bind(window),scrollTo:()=>{}},NodeFilter:{SHOW_TEXT:4},localStorage:{getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)},console,Intl,Date,URL,URLSearchParams,crypto,FormData,TextEncoder,Blob,setTimeout:()=>0,setInterval:()=>0,requestAnimationFrame:cb=>cb(),location:new URL('http://localhost:3000/dashboard'),fetch:async(url,options={})=>{
   calls.push({url,...options});const body=options.body?JSON.parse(options.body):null;let status=200,result={};
   if(url==='/api/data'&&options.method==='PUT'){if(body.version!==data.version){status=409;result={error:'Your account changed in another tab or device. Reload the latest data before saving.'};}else{data={...body,version:data.version+1};result=data;}}
-  else if(url.startsWith('/api/pro/insights')){const items=vm.runInContext('state.subscriptions',context),today=dates.dateKey(new Date(),'Europe/Sofia'),categories={};items.forEach(s=>categories[s.category]=(categories[s.category]||0)+dates.annualAmount(s));result={annual:Object.values(categories).reduce((a,b)=>a+b,0),top:Object.entries(categories).sort((a,b)=>b[1]-a[1])[0]||null,monthlySavings:items.filter(s=>s.lastUsedDate&&dates.dayDifference(today,s.lastUsedDate)>=30).reduce((a,s)=>a+dates.annualAmount(s)/12,0)};}else if(url==='/api/pro/price-changes')result={changes:[]};else if(url==='/api/data')result=data;else if(url==='/api/documents')result={documents:[]};else if(url==='/api/auth/forgot-password')result={message:'If an account exists for that email, a reset link has been sent.'};
+  else if(url.startsWith('/api/pro/insights')){const items=vm.runInContext('state.subscriptions',context),today=dates.dateKey(new Date(),'Europe/Sofia'),categories={};items.forEach(s=>categories[s.category]=(categories[s.category]||0)+dates.annualAmount(s));result={annual:Object.values(categories).reduce((a,b)=>a+b,0),top:Object.entries(categories).sort((a,b)=>b[1]-a[1])[0]||null,monthlySavings:items.filter(s=>s.lastUsedDate&&dates.dayDifference(today,s.lastUsedDate)>=30).reduce((a,s)=>a+dates.annualAmount(s)/12,0)};}else if(url==='/api/pro/price-changes')result={changes:[]};else if(url==='/api/data')result=data;else if(url==='/api/documents')result={documents:[]};else if(url==='/api/transactions')result=tx;else if(url==='/api/transactions/preview')result={account:{id:null,name:body.accountName},rows:body.rows.map(r=>({...r,...transactions.analyzeTransaction(r),fingerprint:'f',duplicate:null,include:true,seriesKey:null})),series:[],previousImport:null};else if(url==='/api/transactions/import'){txImports.push(body);result={imported:body.rows.filter(r=>r.include).length,skipped:0,account:data};}else if(url==='/api/auth/forgot-password')result={message:'If an account exists for that email, a reset link has been sent.'};
   return {ok:status<400,status,json:async()=>result};
  }};
  context.history={pushState:(_,__,p)=>context.location=new URL(p,context.location),replaceState:(_,__,p)=>context.location=new URL(p,context.location)};
@@ -15,11 +15,11 @@ export function harness(){
  run("state.user={id:1,name:'UI Tester',email:'ui@example.test'}");
  const sample=(uid,name,cycle='Monthly',date='2026-01-15')=>({uid,id:'custom',name,customName:'Family',category:'Other',price:10,cycle,renewalDate:date,color:'#6956E8',logo:'S',lastUsedDate:'2026-01-01',lastReviewedDate:null,priceHistory:[]});
  const tick=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
- return {document,context,run,calls,tick,sample,stored,Event:window.Event,data:()=>data};
+ return {document,context,run,calls,tick,sample,stored,Event:window.Event,data:()=>data,txImports};
 }
 test('all routes render in EN, DE and ES with associated form labels',async()=>{
  const h=harness();
- for(const lang of ['en','de','es'])for(const route of ['/','/pricing','/contact','/privacy','/terms','/cookies','/dashboard','/dashboard/subscriptions','/dashboard/calendar','/dashboard/unused','/dashboard/documents','/dashboard/settings','/dashboard/insights','/dashboard/price-changes']){
+ for(const lang of ['en','de','es'])for(const route of ['/','/pricing','/contact','/privacy','/terms','/cookies','/dashboard','/dashboard/transactions','/dashboard/subscriptions','/dashboard/calendar','/dashboard/unused','/dashboard/documents','/dashboard/settings','/dashboard/insights','/dashboard/price-changes']){
   h.context.location=new URL(route,'http://localhost:3000');h.run(`state.lang='${lang}';state.pro=true;state.subscriptions=${JSON.stringify([h.sample('a','A very long service name'),h.sample('b','Weekly','Weekly')])}`);await h.run('render()');
   assert.ok(h.document.querySelector('main'),route);assert.doesNotMatch(h.document.body.innerHTML,/undefined|NaN/,route);
   for(const field of h.document.querySelectorAll('.field')){const input=field.querySelector('input,select,textarea'),label=field.querySelector('label');assert.equal(label.getAttribute('for'),input.id);}
@@ -82,3 +82,37 @@ test('annual and weekly review savings are normalized to monthly',async()=>{
 test('conflict dismissal preserves the actual edit form and its listeners',async()=>{const h=harness();h.run("subscriptionFormModal('custom')");const field=h.document.querySelector('#modal-root input[name="name"]')||h.document.querySelector('#modal-root input');field.value='Unsaved draft';h.run('confirmRefresh()');h.document.querySelector('[data-keep-editing]').click();assert.equal(field.isConnected,true);assert.equal(field.value,'Unsaved draft');h.run('confirmRefresh();closeModal()');assert.equal(field.isConnected,true);});
 
 test('paid offer uses configured price IDs and has no free entitlement toggle',async()=>{const h=harness();h.run("state.plans=[{id:'price_month',amount:499,interval:'month',intervalCount:1}];proModal()");assert.equal(h.document.querySelector('[data-checkout]').dataset.checkout,'price_month');assert.equal(h.document.querySelector('[data-demo-pro]'),null);h.run("acceptAccount({version:1,subscriptions:[],settings:state.settings,proPreview:true,pro:false})");assert.equal(h.run('state.pro'),false);});
+
+const choose=(select,value)=>{for(const o of select.options)o.toggleAttribute('selected',o.value===value);};
+const settle=async()=>{for(let i=0;i<10;i++)await new Promise(r=>setImmediate(r));};
+const txSample=()=>({loaded:true,error:'',accounts:[{id:'acc1',name:'Main'},{id:'acc2',name:'Card'}],imports:[],
+ series:[{seriesKey:'netflix|EUR',merchant:'Netflix',currency:'EUR',cycle:'Monthly',amount:13.99,count:3,lastDate:'2026-08-09',nextDate:'2026-09-09',category:'Entertainment',status:'possible'}],
+ transactions:[{id:'t1',accountId:'acc1',date:'2026-08-01',description:'LIDL SOFIA',merchant:'Lidl',merchantKey:'lidl',amount:-20,currency:'EUR',kind:'expense',category:'Food & groceries'},
+  {id:'t2',accountId:'acc1',date:'2026-08-09',description:'NETFLIX.COM',merchant:'Netflix',merchantKey:'netflix',amount:-13.99,currency:'EUR',kind:'expense',category:'Entertainment'},
+  {id:'t3',accountId:'acc1',date:'2026-08-10',description:'LIDL refund',merchant:'Lidl',merchantKey:'lidl',amount:5,currency:'EUR',kind:'refund',category:'Food & groceries'},
+  {id:'t4',accountId:'acc1',date:'2026-08-15',description:'Salary',merchant:'Salary',merchantKey:'salary',amount:1000,currency:'EUR',kind:'income',category:null},
+  {id:'t5',accountId:'acc1',date:'2026-08-16',description:'To savings',merchant:'Savings',merchantKey:'savings',amount:-200,currency:'EUR',kind:'transfer',category:null},
+  {id:'t6',accountId:'acc2',date:'2026-08-20',description:'Amazon US',merchant:'Amazon',merchantKey:'amazon',amount:-30,currency:'USD',kind:'expense',category:'Shopping'}]});
+test('transactions tab keeps currencies apart, excludes income and transfers, and filters',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/transactions');h.run(`state.tx=${JSON.stringify(txSample())}`);await h.run('render()');
+ const spending=c=>h.document.querySelector(`[data-tx-currency="${c}"] [data-tx-spending]`)?.textContent;
+ assert.equal(spending('EUR'),'€28.99');assert.ok(spending('USD'));assert.equal(h.document.querySelectorAll('[data-tx]').length,6);
+ assert.match(h.document.querySelector('[data-tx="t2"]').textContent,/Possible subscription/);
+ const filters=()=>h.document.querySelector('[data-tx-filters]'),set=(name,value)=>{const el=filters().querySelector(`[name="${name}"]`);if(el.tagName==='SELECT')choose(el,value);else el.value=value;el.dispatchEvent(new h.Event('change',{bubbles:true}));};
+ set('category','Food & groceries');assert.equal(spending('EUR'),'€15.00');assert.equal(h.document.querySelectorAll('[data-tx]').length,2);
+ set('category','');set('account','acc2');assert.equal(spending('EUR'),undefined);assert.equal(h.document.querySelectorAll('[data-tx]').length,1);
+ set('account','');set('from','2026-08-10');assert.equal(h.document.querySelectorAll('[data-tx]').length,4);assert.equal(h.run('state.txFilters.period'),'custom');
+ h.document.querySelector('[data-tx-view="review"]').click();await h.tick();assert.match(h.document.querySelector('.tx-review').textContent,/Netflix/);
+ h.context.location=new URL('http://localhost:3000/dashboard/subscriptions');await h.run('render()');assert.equal(h.context.location.pathname,'/dashboard/transactions');assert.ok(h.document.querySelector('[data-sub-filter]'));
+});
+test('import wizard reads the CSV, explains invalid rows and sends reviewed choices',async()=>{
+ const h=harness();h.run(`state.tx=${JSON.stringify({...txSample(),accounts:[]})};importStatementModal()`);
+ h.document.querySelector('[data-import-form] [name="accountName"]').value='Main';
+ h.context.csvBytes=new TextEncoder().encode('Date,Description,Amount,Currency\n2026-06-01,NETFLIX.COM,-13.99,EUR\n2026-06-02,Coffee,abc,EUR\n2026-06-03,Salary ACME,1500,EUR');
+ await h.run(`handleStatementFile(document.querySelector('[data-import-form]'),{name:'june.csv',size:csvBytes.length,arrayBuffer:async()=>csvBytes.buffer})`);await settle();
+ const dialog=h.document.querySelector('[role="dialog"]');assert.match(dialog.textContent,/Review import/);assert.match(dialog.querySelector('[data-invalid-row]').textContent,/Invalid amount/);
+ const kind=dialog.querySelector('[data-row-kind="1"]');choose(kind,'transfer');kind.dispatchEvent(new h.Event('change'));
+ const include=dialog.querySelector('[data-row-include="0"]');include.checked=false;include.dispatchEvent(new h.Event('change'));
+ dialog.querySelector('[data-confirm-import]').click();await settle();
+ const sent=h.txImports[0];assert.equal(sent.accountName,'Main');assert.deepEqual(sent.rows.map(r=>[r.include,r.kind,r.category]),[[false,'expense','Entertainment'],[true,'transfer',null]]);
+});

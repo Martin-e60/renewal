@@ -1,0 +1,107 @@
+/* Transactions page — temporary functional layout for review and designer hand-off.
+   Visual rules only; behaviour lives in app.js and hooks onto data-* attributes, so this
+   file can be replaced without touching logic. Built on the tokens in styles.css. */
+
+.tx-page{display:grid;gap:14px}
+.tx-page .dash-heading{margin-bottom:0;flex-wrap:wrap}
+.tx-actions{display:flex;gap:8px;flex-wrap:wrap}
+.tx-page .toolbar{margin-bottom:0}
+.tx-count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;margin-left:6px;border-radius:999px;background:var(--primary);color:#fff;font-size:.72rem;font-weight:800}
+
+/* Status messages: loading, empty, error, success */
+.form-message.info{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--border)}
+.tx-status{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.tx-empty{display:grid;gap:10px;justify-items:center}
+.tx-empty h3,.tx-empty p{margin:0}
+
+/* Filters */
+.tx-filters{padding:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;align-items:end}
+.tx-filters .field{gap:5px;min-width:0}
+.tx-filters .field label{font-size:.78rem;color:var(--ink-2)}
+.tx-filters .input{padding:9px 10px;min-height:40px}
+.tx-result-count{font-size:.85rem;color:var(--ink-2);margin:0}
+
+/* Totals per currency */
+.tx-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.tx-total{padding:16px;display:grid;gap:8px;min-width:0}
+.tx-total h2{margin:0;font-size:.9rem;color:var(--ink-2);font-weight:700}
+.tx-total>strong{font-size:1.7rem;letter-spacing:-.03em;line-height:1.1}
+.tx-total>p{margin:0;font-size:.8rem}
+.tx-total .category-list{margin-top:6px}
+.tx-total .category-row{font-size:.8rem}
+
+/* Tables */
+.tx-table-card{padding:0;overflow:hidden}
+.tx-table-scroll{overflow-x:auto}
+.tx-table{width:100%;border-collapse:collapse;font-size:.88rem}
+.tx-table th{position:sticky;top:0;background:var(--surface-2);color:var(--ink-2);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;text-align:left;font-weight:750;padding:9px 12px;white-space:nowrap}
+.tx-table td{padding:10px 12px;border-top:1px solid var(--border);vertical-align:middle;white-space:nowrap}
+.tx-table .tx-notes{white-space:normal;min-width:170px}
+.tx-table tbody tr:hover{background:color-mix(in srgb,var(--surface-2) 55%,transparent)}
+.tx-table .tx-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tx-table .tx-desc{min-width:220px;overflow-wrap:anywhere;white-space:normal}
+.tx-in{color:#147f5c}
+:root[data-theme="dark"] .tx-in{color:#6fe0b6}
+.tx-table .badge{margin-left:6px;vertical-align:middle}
+.tx-table .tiny-select{max-width:190px}
+.tx-table-foot{margin:0;padding:12px;font-size:.85rem;color:var(--ink-2);border-top:1px solid var(--border)}
+.tx-table .empty-state{padding:28px}
+
+/* Notes on review rows */
+.tx-note{display:block;font-size:.78rem;color:var(--ink-2)}
+.tx-note.warn{color:#9a6700}
+:root[data-theme="dark"] .tx-note.warn{color:#ffcf6b}
+.tx-note.error{color:var(--danger)}
+tr.tx-invalid{background:color-mix(in srgb,var(--danger) 6%,transparent)}
+tr.tx-excluded td:not(:first-child){opacity:.55}
+
+/* Lists: imports, possible and confirmed subscriptions */
+.tx-panel{padding:16px;display:grid;gap:4px}
+.tx-panel h2,.tx-panel h3{margin:0 0 6px;font-size:1rem}
+.tx-row{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);flex-wrap:wrap}
+.tx-row:first-of-type{border-top:0}
+.tx-row>div{min-width:0;overflow-wrap:anywhere}
+.tx-row small{display:block;color:var(--ink-2)}
+.tx-review{display:grid;gap:12px}
+.tx-review>p{margin:0}
+.tx-series{padding:16px;display:grid;grid-template-columns:minmax(0,1fr) minmax(170px,220px) auto;gap:14px;align-items:end}
+.tx-series h3{margin:0 0 4px}
+.tx-series p{margin:0;color:var(--ink-2);font-size:.85rem}
+
+/* Import dialogs */
+.modal.tx-modal{width:min(1040px,100%)}
+.tx-form{margin-top:0}
+.tx-dropzone{display:grid;gap:6px;justify-items:center;text-align:center;padding:26px 16px;border:2px dashed var(--border);border-radius:var(--radius);background:var(--surface-2);cursor:pointer;transition:border-color .18s,background .18s}
+.tx-dropzone:hover,.tx-dropzone.is-dragging{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 7%,var(--surface))}
+.tx-dropzone span{color:var(--ink-2);font-size:.88rem}
+.tx-dropzone input[type=file]{max-width:100%;font-size:.85rem}
+.tx-summary-line{margin:0 0 10px;font-size:.9rem}
+.tx-possible{display:grid;gap:8px;margin:0 0 12px}
+.tx-possible h3{margin:0;font-size:.95rem}
+.tx-possible-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(150px,200px) minmax(150px,200px);gap:8px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:12px}
+.tx-possible-row small{display:block;color:var(--ink-2)}
+.tx-modal .tx-table-scroll{max-height:52vh;overflow:auto;border:1px solid var(--border);border-radius:12px}
+.tx-modal .modal-actions{position:sticky;bottom:-22px;background:var(--surface);padding:12px 0 0}
+.tx-mapping td,.tx-mapping th{padding:8px 10px}
+.tx-mapping .input{padding:8px 10px}
+.tx-mapping-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+
+/* Phones: tables become stacked cards, controls take the full width */
+@media(max-width:620px){
+  .tx-actions{width:100%}.tx-actions .btn{flex:1}
+  .tx-page .dash-heading>.tx-actions{display:flex}
+  .tx-filters{grid-template-columns:1fr 1fr}
+  .tx-series{grid-template-columns:1fr}
+  .tx-possible-row{grid-template-columns:1fr}
+  .tx-table thead{display:none}
+  .tx-table,.tx-table tbody,.tx-table tr,.tx-table td{display:block;width:100%}
+  .tx-table tr{padding:10px 12px;border-top:1px solid var(--border)}
+  .tx-table td{border:0;padding:4px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:right}
+  .tx-table td::before{content:attr(data-label);color:var(--ink-2);font-size:.75rem;font-weight:700;text-align:left;flex:none}
+  .tx-table td:not([data-label])::before{content:none}
+  .tx-table .tx-desc{min-width:0;display:block;text-align:left;font-weight:650}
+  .tx-table .tiny-select{max-width:60%}
+  .tx-table .tx-notes{display:block;text-align:left;min-width:0}
+  .tx-modal .tx-table-scroll{max-height:none}
+  .tx-modal .modal-actions{bottom:-17px}
+}

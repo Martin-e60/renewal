@@ -1,5 +1,133 @@
 // Exact UI strings only; user-entered names and file contents are never translated.
 const rows = `
+Transactions|Transaktionen|Transacciones
+transactions|Transaktionen|transacciones
+Loading transactions…|Transaktionen werden geladen…|Cargando transacciones…
+Import statement|Kontoauszug importieren|Importar extracto
+Imported bank transactions and the subscriptions you track.|Importierte Banktransaktionen und deine erfassten Abos.|Transacciones bancarias importadas y las suscripciones que sigues.
+All transactions|Alle Transaktionen|Todas las transacciones
+Subscriptions|Abos|Suscripciones
+To review|Zu prüfen|Por revisar
+Period|Zeitraum|Periodo
+All time|Gesamter Zeitraum|Todo el tiempo
+This month|Dieser Monat|Este mes
+Last month|Letzter Monat|Mes pasado
+Last 90 days|Letzte 90 Tage|Últimos 90 días
+This year|Dieses Jahr|Este año
+Custom|Benutzerdefiniert|Personalizado
+From|Von|Desde
+To|Bis|Hasta
+Account|Konto|Cuenta
+All accounts|Alle Konten|Todas las cuentas
+All categories|Alle Kategorien|Todas las categorías
+Type|Typ|Tipo
+All types|Alle Typen|Todos los tipos
+Expense|Ausgabe|Gasto
+Income|Einnahme|Ingreso
+Transfer|Umbuchung|Transferencia
+Refund|Erstattung|Reembolso
+Food & groceries|Essen & Lebensmittel|Comida y supermercado
+Transport|Verkehr|Transporte
+Shopping|Einkäufe|Compras
+Entertainment|Unterhaltung|Entretenimiento
+Bills & utilities|Rechnungen & Nebenkosten|Facturas y suministros
+Health|Gesundheit|Salud
+Other|Sonstiges|Otros
+Date|Datum|Fecha
+Description|Beschreibung|Descripción
+Amount|Betrag|Importe
+Spending|Ausgaben|Gastos
+Transfers between own accounts|Umbuchungen zwischen eigenen Konten|Transferencias entre cuentas propias
+Not counted as spending.|Nicht als Ausgaben gezählt.|No cuenta como gasto.
+No transactions yet|Noch keine Transaktionen|Aún no hay transacciones
+Import a CSV bank statement to see your spending by category.|Importiere einen CSV-Kontoauszug, um deine Ausgaben nach Kategorien zu sehen.|Importa un extracto bancario CSV para ver tus gastos por categoría.
+No transactions match these filters.|Keine Transaktionen passen zu diesen Filtern.|Ninguna transacción coincide con estos filtros.
+Showing the latest 500 transactions. Narrow the filters to see the rest.|Die neuesten 500 Transaktionen werden angezeigt. Grenze die Filter ein, um den Rest zu sehen.|Se muestran las 500 transacciones más recientes. Ajusta los filtros para ver el resto.
+Subscription|Abo|Suscripción
+Possible subscription|Mögliches Abo|Posible suscripción
+Possible subscriptions|Mögliche Abos|Posibles suscripciones
+Confirm subscription|Abo bestätigen|Confirmar suscripción
+Not a subscription|Kein Abo|No es una suscripción
+Move back to review|Wieder zur Prüfung|Volver a revisar
+Marked as not a subscription|Als kein Abo markiert|Marcadas como no suscripción
+No possible subscriptions to review. Import a statement with a few months of payments to find recurring charges.|Keine möglichen Abos zu prüfen. Importiere einen Kontoauszug über einige Monate, um wiederkehrende Zahlungen zu finden.|No hay posibles suscripciones por revisar. Importa un extracto de varios meses para encontrar cargos recurrentes.
+Confirmed EUR subscriptions are added to your renewal tracker, calendar and reminders.|Bestätigte EUR-Abos werden zu Verlängerungen, Kalender und Erinnerungen hinzugefügt.|Las suscripciones en EUR confirmadas se añaden a renovaciones, calendario y recordatorios.
+payments|Zahlungen|pagos
+Last payment|Letzte Zahlung|Último pago
+Next expected|Nächste erwartet|Próximo previsto
+Confirmed from transactions|Aus Transaktionen bestätigt|Confirmadas desde transacciones
+These confirmed subscriptions are not in your renewal tracker. Renewal tracking supports EUR only.|Diese bestätigten Abos sind nicht in deiner Verlängerungsübersicht. Sie unterstützt nur EUR.|Estas suscripciones confirmadas no están en tus renovaciones. Solo se admite EUR.
+Imported statements|Importierte Kontoauszüge|Extractos importados
+imported|importiert|importadas
+skipped|übersprungen|omitidas
+Remove import|Import entfernen|Eliminar importación
+Remove import?|Import entfernen?|¿Eliminar importación?
+This removes the transactions saved from this file. Tracked subscriptions are kept.|Die aus dieser Datei gespeicherten Transaktionen werden entfernt. Erfasste Abos bleiben erhalten.|Se eliminan las transacciones guardadas de este archivo. Las suscripciones seguidas se conservan.
+Keep transactions|Transaktionen behalten|Conservar transacciones
+Import removed.|Import entfernt.|Importación eliminada.
+Upload a CSV bank statement. Nothing is saved until you confirm.|Lade einen CSV-Kontoauszug hoch. Nichts wird gespeichert, bevor du bestätigst.|Sube un extracto bancario CSV. No se guarda nada hasta que confirmes.
+New account…|Neues Konto…|Nueva cuenta…
+New account name|Name des neuen Kontos|Nombre de la nueva cuenta
+e.g. Main current account|z. B. Girokonto|p. ej. Cuenta corriente
+Currency when the file has none|Währung, falls die Datei keine enthält|Moneda si el archivo no la indica
+Drag a CSV file here|CSV-Datei hierher ziehen|Arrastra aquí un archivo CSV
+or choose a file|oder Datei auswählen|o elige un archivo
+Match the columns|Spalten zuordnen|Asignar columnas
+Tell us which column contains the date, description and amount.|Gib an, welche Spalte Datum, Beschreibung und Betrag enthält.|Indica qué columna contiene la fecha, la descripción y el importe.
+Choose which columns contain the date, description and amount.|Wähle die Spalten für Datum, Beschreibung und Betrag.|Elige las columnas de fecha, descripción e importe.
+Header row|Kopfzeile|Fila de encabezado
+No header row|Keine Kopfzeile|Sin fila de encabezado
+Date format|Datumsformat|Formato de fecha
+Day before month (31.12.2026)|Tag vor Monat (31.12.2026)|Día antes del mes (31.12.2026)
+Month before day (12/31/2026)|Monat vor Tag (12/31/2026)|Mes antes del día (12/31/2026)
+Column|Spalte|Columna
+Examples|Beispiele|Ejemplos
+Contains|Enthält|Contiene
+Ignore|Ignorieren|Ignorar
+Merchant or counterparty|Händler oder Gegenpartei|Comercio o contraparte
+Money out|Ausgang|Salida
+Money in|Eingang|Entrada
+Debit/credit marker|Soll/Haben-Kennzeichen|Indicador de cargo/abono
+Currency|Währung|Moneda
+Type or notes|Typ oder Notizen|Tipo o notas
+Continue|Weiter|Continuar
+Reading the statement…|Kontoauszug wird gelesen…|Leyendo el extracto…
+Review import|Import prüfen|Revisar importación
+Decide later|Später entscheiden|Decidir más tarde
+Decision|Entscheidung|Decisión
+Import|Importieren|Importar
+Line|Zeile|Línea
+Notes|Hinweise|Notas
+selected for import|zum Import ausgewählt|seleccionadas para importar
+invalid rows skipped|ungültige Zeilen übersprungen|filas no válidas omitidas
+Already imported|Bereits importiert|Ya importada
+Possible duplicate|Mögliches Duplikat|Posible duplicado
+Same as another row in this file|Gleich wie eine andere Zeile dieser Datei|Igual que otra fila de este archivo
+Matches a transfer in|Passt zu einer Umbuchung in|Coincide con una transferencia en
+Change columns|Spalten ändern|Cambiar columnas
+Confirm import|Import bestätigen|Confirmar importación
+This file was already imported. Rows that are already saved are excluded.|Diese Datei wurde bereits importiert. Bereits gespeicherte Zeilen sind ausgeschlossen.|Este archivo ya se importó. Las filas guardadas se excluyen.
+Missing date|Datum fehlt|Falta la fecha
+Invalid date|Ungültiges Datum|Fecha no válida
+Missing amount|Betrag fehlt|Falta el importe
+Invalid amount|Ungültiger Betrag|Importe no válido
+Amount is zero|Betrag ist null|El importe es cero
+Unknown currency|Unbekannte Währung|Moneda desconocida
+Missing description|Beschreibung fehlt|Falta la descripción
+Balance or total row|Saldo- oder Summenzeile|Fila de saldo o total
+Enter an account name.|Gib einen Kontonamen ein.|Introduce un nombre de cuenta.
+Enter a three-letter currency code, for example EUR.|Gib einen dreistelligen Währungscode ein, z. B. EUR.|Introduce un código de moneda de tres letras, por ejemplo EUR.
+Choose a CSV file up to 10 MB.|Wähle eine CSV-Datei bis 10 MB.|Elige un archivo CSV de hasta 10 MB.
+The file has no transactions.|Die Datei enthält keine Transaktionen.|El archivo no contiene transacciones.
+No valid transactions were found with these columns. Check the column matches.|Mit diesen Spalten wurden keine gültigen Transaktionen gefunden. Prüfe die Zuordnung.|No se encontraron transacciones válidas con estas columnas. Revisa la asignación.
+Import up to 5,000 transactions at a time.|Importiere höchstens 5.000 Transaktionen auf einmal.|Importa hasta 5.000 transacciones a la vez.
+Select at least one transaction to import.|Wähle mindestens eine Transaktion zum Import.|Selecciona al menos una transacción para importar.
+Subscription confirmed.|Abo bestätigt.|Suscripción confirmada.
+Saved.|Gespeichert.|Guardado.
+Try again|Erneut versuchen|Reintentar
+Choose one of your accounts.|Wähle eines deiner Konten.|Elige una de tus cuentas.
+This possible subscription is no longer available.|Dieses mögliche Abo ist nicht mehr verfügbar.|Esta posible suscripción ya no está disponible.
+The statement contains an invalid transaction.|Der Kontoauszug enthält eine ungültige Transaktion.|El extracto contiene una transacción no válida.
 Billing|Abrechnung|Facturación
 Manage billing|Abrechnung verwalten|Gestionar facturación
 Refresh billing status|Zahlungsstatus aktualisieren|Actualizar estado de pago
