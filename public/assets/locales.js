@@ -399,6 +399,9 @@ Download|Herunterladen|Descargar
 No documents yet|Noch keine Dokumente|Aún no hay documentos
 Add a receipt, invoice or cancellation confirmation.|Füge einen Beleg, eine Rechnung oder Kündigungsbestätigung hinzu.|Añade un recibo, factura o confirmación de cancelación.
 Account and interface preferences.|Konto- und Anzeigeeinstellungen.|Preferencias de cuenta e interfaz.
+Account & appearance|Konto & Darstellung|Cuenta y apariencia
+Security & reminders|Sicherheit & Erinnerungen|Seguridad y recordatorios
+Data & billing|Daten & Abrechnung|Datos y facturación
 Profile|Profil|Perfil
 Appearance|Darstellung|Apariencia
 Change password|Passwort ändern|Cambiar contraseña
@@ -409,6 +412,7 @@ Email delivery is not configured. You can still export calendar reminders.|E-Mai
 Time zone|Zeitzone|Zona horaria
 Days before renewal|Tage vor Verlängerung|Días antes de la renovación
 Verify email|E-Mail verifizieren|Verificar correo
+Verify your email first to unlock reminders.|Bestätige zuerst deine E-Mail-Adresse, um Erinnerungen zu aktivieren.|Verifica primero tu correo para activar los recordatorios.
 Enable email reminders|E-Mail-Erinnerungen aktivieren|Activar recordatorios por correo
 Export calendar reminders|Kalendererinnerungen exportieren|Exportar recordatorios de calendario
 Calendar export contains the next 12 months. Re-export after changing your records.|Der Export enthält die nächsten 12 Monate. Nach Änderungen erneut exportieren.|La exportación incluye los próximos 12 meses. Exporta de nuevo tras hacer cambios.
@@ -417,6 +421,17 @@ Subscriptions and files are saved to your account.|Abos und Dateien werden in de
 Import previous browser records|Frühere Browsereinträge importieren|Importar registros anteriores del navegador
 Old document entries contain no file contents. Upload those files again.|Alte Dokumenteinträge enthalten keine Dateien. Lade diese erneut hoch.|Los registros antiguos de documentos no contienen los archivos. Vuelve a subirlos.
 Export subscriptions|Abos exportieren|Exportar suscripciones
+Account backup|Kontosicherung|Copia de seguridad de la cuenta
+Download your records and actual document files in one private backup.|Lade deine Einträge und die zugehörigen Dokumentdateien in einer privaten Sicherung herunter.|Descarga tus registros y los archivos de documentos en una copia de seguridad privada.
+Imports merge with your account. Existing subscription IDs and identical files are skipped.|Importe werden mit deinem Konto zusammengeführt. Bereits vorhandene Abo-IDs und identische Dateien werden übersprungen.|Las importaciones se combinan con tu cuenta. Se omiten los identificadores de suscripción y archivos idénticos existentes.
+Review sign-ins and sign out your other sessions.|Prüfe Anmeldungen und melde deine anderen Sitzungen ab.|Revisa los inicios de sesión y cierra tus otras sesiones.
+Manage sessions|Sitzungen verwalten|Gestionar sesiones
+Email delivery must be configured to change your address.|Der E-Mail-Versand muss eingerichtet sein, um deine Adresse zu ändern.|El envío de correo debe estar configurado para cambiar tu dirección.
+Access ends|Zugang endet|El acceso termina
+Current period ends|Aktueller Zeitraum endet|El período actual termina
+Upgrade to Pro|Auf Pro upgraden|Mejorar a Pro
+Manage invoices, payment methods and cancellation in the billing portal.|Verwalte Rechnungen, Zahlungsmethoden und Kündigungen im Abrechnungsportal.|Gestiona facturas, métodos de pago y cancelaciones en el portal de facturación.
+Permanently remove your account, subscriptions and uploaded files from this server. Download a backup first. Your paid Pro subscription will be canceled immediately. This does not issue a refund.|Entferne dein Konto, Abos und hochgeladene Dateien dauerhaft von diesem Server. Lade vorher eine Sicherung herunter. Dein kostenpflichtiges Pro-Abo wird sofort beendet. Dies löst keine Rückerstattung aus.|Elimina permanentemente tu cuenta, suscripciones y archivos subidos de este servidor. Descarga primero una copia de seguridad. Tu suscripción Pro de pago se cancelará de inmediato. Esto no genera un reembolso.
 Choose a popular service or add it manually.|Wähle einen Dienst oder füge ihn manuell hinzu.|Elige un servicio o añádelo manualmente.
 Search for a service|Dienst suchen|Buscar un servicio
 Popular services|Beliebte Dienste|Servicios populares
