@@ -44,6 +44,8 @@ Payments this month|Zahlungen diesen Monat|Pagos de este mes
 No scheduled payments this month.|Diesen Monat sind keine Zahlungen geplant.|No hay pagos programados este mes.
 Saving…|Wird gespeichert…|Guardando…
 Add|Hinzufügen|Añadir
+Show password|Passwort anzeigen|Mostrar contraseña
+Hide password|Passwort ausblenden|Ocultar contraseña
 
 Transactions|Transaktionen|Transacciones
 Add transaction|Transaktion hinzufügen|Añadir transacción
