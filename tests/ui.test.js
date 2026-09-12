@@ -49,6 +49,13 @@ test('forgot-password binding is idempotent and repeat submit sends one request'
  for(let i=0;i<2;i++){form.dispatchEvent(new h.Event('submit',{cancelable:true}));await h.tick();}
  assert.equal(h.calls.filter(c=>c.url==='/api/auth/forgot-password').length,2);
 });
+test('registration password can be shown and hidden without changing its value',async()=>{
+ const h=harness();h.run('state.user=null');h.context.location=new URL('http://localhost:3000/register');await h.run('render()');
+ const input=h.document.querySelector('[data-auth-form="register"] [name="password"]'),toggle=h.document.querySelector('[data-password-toggle]');input.value='TestPassword123!';
+ assert.equal(input.type,'password');assert.equal(toggle.getAttribute('aria-controls'),input.id);assert.equal(toggle.getAttribute('aria-label'),'Show password');
+ toggle.click();assert.equal(input.type,'text');assert.equal(input.value,'TestPassword123!');assert.equal(toggle.getAttribute('aria-label'),'Hide password');assert.equal(toggle.getAttribute('aria-pressed'),'true');
+ toggle.click();assert.equal(input.type,'password');assert.equal(toggle.getAttribute('aria-label'),'Show password');assert.equal(toggle.getAttribute('aria-pressed'),'false');
+});
 test('modal background is inert and editing controls and labels exist',()=>{
  const h=harness();h.run("subscriptionFormModal('custom')");assert.equal(h.document.querySelector('#app').inert,true);assert.equal(h.document.querySelector('[role="dialog"]').getAttribute('aria-labelledby'),'modal-title');
  for(const field of h.document.querySelectorAll('.field'))assert.ok(field.querySelector('label').getAttribute('for'));
