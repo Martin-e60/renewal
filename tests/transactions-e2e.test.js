@@ -10,6 +10,7 @@ async function freePort(){const s=http.createServer();s.listen(0,'127.0.0.1');aw
 const settle=async(n=40)=>{for(let i=0;i<n;i++)await new Promise(r=>setImmediate(r));};
 const cp1251=s=>Uint8Array.from([...s].map(c=>{const code=c.charCodeAt(0);return code>=0x410&&code<=0x44f?code-0x350:code;}));
 const choose=(select,value)=>{for(const o of select.options)o.toggleAttribute('selected',o.value===value);};
+const pick=(picker,value)=>{const option=[...picker.querySelectorAll('[data-tx-picker-option]')].find(button=>button.getAttribute('data-tx-picker-option')===String(value));assert.ok(option,`Missing picker option ${value}`);picker.open=true;option.click();};
 
 // One browser tab: a fresh DOM running app.js, signed in with the given session cookie.
 function tab(base,who,route='/dashboard/transactions'){
@@ -119,10 +120,10 @@ test('transactions workflow end to end with the real UI code, API and database',
   assert.equal(t.$('[data-row-category="12"]').value,'Bills & utilities','ЕВН is a utility bill');
   const exclude=t.$('[data-row-include="9"]');exclude.checked=false;exclude.dispatchEvent(new t.Event('change'));
   assert.equal(t.$('[data-selected-count]').textContent,'15');
-  const cinema=t.$('[data-row-category="15"]');choose(cinema,'Other');cinema.dispatchEvent(new t.Event('change'));
+  const cinema=t.$('[data-row-category="15"]');pick(cinema.closest('[data-tx-picker]'),'Other');
   const series=Object.fromEntries(t.$$('.tx-possible-row').map(el=>[el.querySelector('strong').textContent,el]));
   assert.deepEqual(Object.keys(series).sort(),['Netflix','Spotify']);
-  const decide=(el,status)=>{const s=el.querySelector('[data-decision]');choose(s,status);s.dispatchEvent(new t.Event('change'));};
+  const decide=(el,status)=>{const s=el.querySelector('[data-decision]');pick(s.closest('[data-tx-picker]'),status);};
   decide(series.Netflix,'confirmed');decide(series.Spotify,'rejected');t.snap('3-review');
 
   // 5. Confirm import: saved for this user and account.
@@ -155,13 +156,13 @@ test('transactions workflow end to end with the real UI code, API and database',
   // 2. Unknown format into a second account: manual column matching; the incoming 150 pairs
   // with the outgoing 150 in the main account, so both become transfers.
   await t.click('[data-import-statement]');
-  const accountSelect=t.$('[data-import-form] [name="accountId"]');choose(accountSelect,'');accountSelect.dispatchEvent(new t.Event('change'));
+  const accountSelect=t.$('[data-import-form] [name="accountId"]');pick(accountSelect.closest('[data-tx-picker]'),'');
   assert.equal(t.$('[data-new-account]').hidden,false);
   t.$('[data-import-form] [name="accountName"]').value='Card';
   await t.upload('card.csv',new TextEncoder().encode(cardCsv));
-  const mapping=t.$('[data-mapping-form]');assert.ok(mapping,'column matching is requested');assert.ok(mapping.querySelector('.tx-mapping-list'));assert.equal(mapping.querySelector('.tx-table-scroll'),null);t.snap('4-mapping');
+  const mapping=t.$('[data-mapping-form]');assert.ok(mapping,'column matching is requested');assert.ok(mapping.querySelector('.tx-mapping-list'));assert.equal(mapping.querySelector('.tx-table-scroll'),null);assert.equal(mapping.querySelectorAll('select').length,0,'mapping stays inside the modal with custom pickers');assert.ok(mapping.querySelector('[data-picker-key="header-index"]'));assert.ok(mapping.querySelector('[data-picker-key="date-order"]'));t.snap('4-mapping');
   assert.deepEqual([0,1,2,3].map(i=>mapping.querySelector(`[name="column-${i}"]`).value),['date','description','amount','currency']);
-  choose(mapping.querySelector('[name="column-1"]'),'counterparty');
+  pick(mapping.querySelector('[name="column-1"]').closest('[data-tx-picker]'),'counterparty');
   mapping.dispatchEvent(new t.Event('submit',{cancelable:true}));await t.idle();
   assert.equal(t.$('[data-row-kind="0"]').value,'transfer');assert.match(t.$('[role="dialog"]').textContent,/Matches a transfer in/);
   await t.click('[data-confirm-import]');
