@@ -530,6 +530,50 @@ Duedar is currently a starter product. Manually entered subscription records are
 An essential session cookie keeps you signed in. Local storage saves your interface preferences. Subscription records and document contents are stored in your account on the server. This starter has no advertising cookies.|Ein notwendiges Sitzungscookie hält dich angemeldet. Lokale Speicherung enthält Anzeigeeinstellungen. Abos und Dokumentinhalte werden auf dem Server in deinem Konto gespeichert. Es gibt keine Werbecookies.|Una cookie esencial mantiene tu sesión. El almacenamiento local guarda las preferencias de interfaz. Las suscripciones y los documentos se guardan en tu cuenta en el servidor. No hay cookies publicitarias.
 You can sign out at any time. Local interface preferences can be cleared from your browser storage. Account deletion and data export should be implemented before a production launch.|Du kannst dich jederzeit abmelden und lokale Einstellungen im Browser löschen. Die Kontolöschung muss vor dem Produktivstart eingerichtet werden.|Puedes cerrar sesión y borrar las preferencias locales en cualquier momento. La eliminación de cuentas debe implementarse antes del lanzamiento.
 Questions can be sent to|Fragen bitte an|Puedes enviar tus preguntas a
+From early users|Von ersten Nutzern|De usuarios iniciales
+A calmer way to stay on top of payments.|Ein ruhigerer Weg, Zahlungen im Blick zu behalten.|Una forma más tranquila de controlar tus pagos.
+Placeholder feedback for now — ready to swap with verified customer quotes when they arrive.|Vorläufiges Platzhalter-Feedback – bereit für echte Kundenstimmen.|Comentarios provisionales, listos para sustituirse por opiniones verificadas.
+Early Duedar tester|Früher Duedar-Tester|Usuario inicial de Duedar
+Previous testimonial|Vorherige Bewertung|Testimonio anterior
+Next testimonial|Nächste Bewertung|Siguiente testimonio
+Choose testimonial|Bewertung auswählen|Elegir testimonio
+Simple pricing|Einfache Preise|Precios sencillos
+Start with the essentials. Upgrade only when you want a clearer picture of your recurring spend.|Beginne mit dem Wesentlichen. Upgrade erst, wenn du deine wiederkehrenden Ausgaben klarer sehen möchtest.|Empieza con lo esencial. Mejora solo cuando quieras una visión más clara de tus gastos recurrentes.
+Free plan|Kostenloser Plan|Plan gratuito
+Everything you need to make renewals visible.|Alles, was du brauchst, um Verlängerungen sichtbar zu machen.|Todo lo que necesitas para ver tus renovaciones.
+Included|Enthalten|Incluido
+Renewal calendar and upcoming-payment view|Verlängerungskalender und Übersicht kommender Zahlungen|Calendario de renovaciones y vista de próximos pagos
+Email reminders after verification|E-Mail-Erinnerungen nach Bestätigung|Recordatorios por correo tras la verificación
+Documents and account export|Dokumente und Kontoexport|Documentos y exportación de cuenta
+More control|Mehr Kontrolle|Más control
+See which recurring costs deserve attention before they add up.|Erkenne wiederkehrende Kosten, bevor sie sich summieren.|Descubre qué costes recurrentes requieren atención antes de que se acumulen.
+Everything in Starter, plus|Alles aus Starter, plus|Todo lo de Starter, además
+Recurring-cost insights and category breakdowns|Einblicke in wiederkehrende Kosten und Kategorien|Información de costes recurrentes y desglose por categorías
+Recorded price changes and yearly impact|Erfasste Preisänderungen und jährliche Auswirkung|Cambios de precio registrados e impacto anual
+Unused subscription review signals|Hinweise für ungenutzte Abos|Señales para revisar suscripciones sin uso
+Clearer annual spending overview|Klarere Übersicht der jährlichen Ausgaben|Resumen anual de gastos más claro
+Send us a message and we will take it from there.|Schreib uns, wir kümmern uns dann darum.|Envíanos un mensaje y nos ocuparemos del resto.
+Email Duedar|Duedar per E-Mail kontaktieren|Enviar correo a Duedar
+Copy email|E-Mail kopieren|Copiar correo
+If your email app does not open, copy the address instead.|Wenn dein E-Mail-Programm nicht öffnet, kopiere stattdessen die Adresse.|Si tu aplicación de correo no se abre, copia la dirección.
+Before you write|Bevor du schreibst|Antes de escribir
+Most answers are one click away.|Die meisten Antworten sind nur einen Klick entfernt.|La mayoría de las respuestas están a un clic.
+Manage reminders, review your plan or check the answers below before sending a message.|Verwalte Erinnerungen, prüfe deinen Plan oder lies die Antworten unten.|Gestiona recordatorios, revisa tu plan o consulta las respuestas antes de enviar un mensaje.
+Compare plans|Pläne vergleichen|Comparar planes
+FAQ|FAQ|Preguntas frecuentes
+A few useful answers before you need support.|Ein paar hilfreiche Antworten, bevor du Support brauchst.|Algunas respuestas útiles antes de necesitar soporte.
+Click a question to reveal its answer.|Klicke auf eine Frage, um die Antwort zu sehen.|Haz clic en una pregunta para ver la respuesta.
+Does Duedar connect to my bank account?|Verbindet sich Duedar mit meinem Bankkonto?|¿Duedar se conecta a mi cuenta bancaria?
+No. You add and manage the recurring services you want to track. Duedar does not need access to your bank account or inbox for the starter experience.|Nein. Du fügst die wiederkehrenden Dienste selbst hinzu und verwaltest sie. Duedar braucht für Starter keinen Zugriff auf Bankkonto oder Postfach.|No. Añades y gestionas los servicios recurrentes que quieres seguir. Duedar no necesita acceso a tu banco ni a tu correo para Starter.
+How do email reminders work?|Wie funktionieren E-Mail-Erinnerungen?|¿Cómo funcionan los recordatorios por correo?
+Verify your email in Settings, choose how many days before renewal you want to be reminded, then enable reminders. The server sends them while it is online.|Bestätige deine E-Mail in den Einstellungen, wähle die Tage vor der Verlängerung und aktiviere Erinnerungen. Der Server sendet sie, solange er online ist.|Verifica tu correo en Ajustes, elige cuántos días antes de la renovación quieres el aviso y activa los recordatorios. El servidor los envía mientras está en línea.
+Can I cancel Duedar Pro?|Kann ich Duedar Pro kündigen?|¿Puedo cancelar Duedar Pro?
+Yes. Manage or cancel Pro from Settings. Your checkout page always shows the billing interval and applicable taxes before payment.|Ja. Du kannst Pro in den Einstellungen verwalten oder kündigen. Die Checkout-Seite zeigt vor der Zahlung immer Intervall und anfallende Steuern.|Sí. Puedes gestionar o cancelar Pro desde Ajustes. La página de pago siempre muestra el intervalo y los impuestos aplicables antes de pagar.
+Can I export my renewal dates?|Kann ich meine Verlängerungstermine exportieren?|¿Puedo exportar mis fechas de renovación?
+Yes. In Settings you can export the next 12 months of reminders to your calendar and download your subscription data.|Ja. In den Einstellungen kannst du die nächsten 12 Monate in deinen Kalender exportieren und deine Abodaten herunterladen.|Sí. En Ajustes puedes exportar los próximos 12 meses de recordatorios a tu calendario y descargar tus datos de suscripciones.
+What should I do if a price changes?|Was soll ich bei einer Preisänderung tun?|¿Qué debo hacer si cambia un precio?
+Update the subscription with the new amount and keep its billing date. Pro records price changes so you can see their annual impact.|Aktualisiere das Abo mit dem neuen Betrag und behalte das Zahlungsdatum bei. Pro erfasst Preisänderungen und ihre jährliche Auswirkung.|Actualiza la suscripción con el nuevo importe y conserva la fecha de cobro. Pro registra los cambios de precio para ver su impacto anual.
+Email copied to clipboard.|E-Mail in die Zwischenablage kopiert.|Correo copiado al portapapeles.
 `;
 export const translations=Object.fromEntries(rows.trim().split('\n').map(row=>{const [en,de,es]=row.split('|');return [en,{de,es}];}));
 export function translateText(text,lang){if(lang==='en')return text;const key=text.trim();const translated=translations[key]?.[lang];return translated?text.replace(key,translated):text;}
