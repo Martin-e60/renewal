@@ -68,6 +68,13 @@ test('empty insights do not invent a leading category or savings',async()=>{
 test('theme switch preserves unsaved profile fields',async()=>{
  const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/settings');await h.run('render()');const name=h.document.querySelector('[data-profile-form] [name="name"]');name.value='Unsaved draft';h.document.querySelector('[data-theme-toggle]').click();assert.equal(h.document.querySelector('[data-profile-form] [name="name"]').value,'Unsaved draft');
 });
+test('settings groups actions into compact sections and keeps the danger zone full width',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/settings');h.run("state.meta={...(state.meta||{}),mailReady:true};state.settings={...state.settings,emailVerified:false}");await h.run('render()');
+ assert.equal(h.document.querySelectorAll('.settings-section').length,3);
+ assert.ok(h.document.querySelector('.reminder-card .reminder-verification [data-verify-email]'));
+ assert.ok(h.document.querySelector('[data-profile-form] .settings-actions .btn-primary'));
+ assert.ok(h.document.querySelector('.settings-card-wide.danger-zone [data-delete-account]'));
+});
 test('language switch preserves drafts and never translates a user plan named Home',async()=>{
  const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/settings');await h.run('render()');h.document.querySelector('[data-profile-form] [name="name"]').value='Unsaved draft';h.run("changeLanguage('de')");assert.equal(h.document.querySelector('[data-profile-form] [name="name"]').value,'Unsaved draft');
  h.context.location=new URL('http://localhost:3000/dashboard/subscriptions');h.run(`state.subscriptions=${JSON.stringify([{...h.sample('a','Home'),customName:'Home'}])}`);await h.run('render()');assert.equal(h.document.querySelector('.plan-name').textContent,'Home');assert.equal(h.document.querySelector('.subscription-card h3').textContent,'Home');
