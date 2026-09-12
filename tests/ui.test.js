@@ -157,7 +157,7 @@ test('import wizard reads the CSV, explains invalid rows and sends reviewed choi
  h.document.querySelector('[data-import-form] [name="accountName"]').value='Main';
  h.context.csvBytes=new TextEncoder().encode('Date,Description,Amount,Currency\n2026-06-01,NETFLIX.COM,-13.99,EUR\n2026-06-02,Coffee,abc,EUR\n2026-06-03,Salary ACME,1500,EUR');
  await h.run(`handleStatementFile(document.querySelector('[data-import-form]'),{name:'june.csv',size:csvBytes.length,arrayBuffer:async()=>csvBytes.buffer})`);await settle();
- const dialog=h.document.querySelector('[role="dialog"]');assert.match(dialog.textContent,/Review import/);assert.match(dialog.querySelector('[data-invalid-row]').textContent,/Invalid amount/);
+ const dialog=h.document.querySelector('[role="dialog"]');assert.match(dialog.textContent,/Review import/);assert.match(dialog.querySelector('[data-invalid-row]').textContent,/Invalid amount/);assert.ok(dialog.querySelector('.tx-review-list'));assert.equal(dialog.querySelector('.tx-review-list .tx-table'),null);
  const kind=dialog.querySelector('[data-row-kind="1"]');choose(kind,'transfer');kind.dispatchEvent(new h.Event('change'));
  const include=dialog.querySelector('[data-row-include="0"]');include.checked=false;include.dispatchEvent(new h.Event('change'));
  dialog.querySelector('[data-confirm-import]').click();await settle();

@@ -113,7 +113,7 @@ test('transactions workflow end to end with the real UI code, API and database',
   // 2–4. Recognised Windows-1251 layout goes straight to review; invalid rows are explained.
   let dialog=t.$('[role="dialog"]');assert.match(dialog.textContent,/Review import/);
   const invalid=t.$$('[data-invalid-row]');assert.equal(invalid.length,2);assert.ok(invalid.every(r=>/Invalid date/.test(r.textContent)));
-  const reviewRows=t.$$('.tx-table tbody tr:not([data-invalid-row])');assert.equal(reviewRows.length,16);
+  const reviewRows=t.$$('[data-review-row]:not([data-invalid-row])');assert.equal(reviewRows.length,16);assert.ok(dialog.querySelector('.tx-review-list'));assert.equal(dialog.querySelector('.tx-review-list .tx-table'),null);
   assert.match(reviewRows[3].textContent,/Same as another row in this file/);
   assert.deepEqual([0,5,6,7].map(i=>t.$(`[data-row-kind="${i}"]`).value),['income','refund','transfer','expense']);
   assert.equal(t.$('[data-row-category="12"]').value,'Bills & utilities','ЕВН is a utility bill');
@@ -142,7 +142,7 @@ test('transactions workflow end to end with the real UI code, API and database',
   await t.upload('june-august.csv',cp1251(mainCsv));
   dialog=t.$('[role="dialog"]');assert.match(dialog.textContent,/already imported/);
   assert.equal(t.$('[data-selected-count]').textContent,'1');
-  assert.equal(t.$$('.tx-table tbody tr').filter(r=>/Already imported/.test(r.textContent)).length,15);
+  assert.equal(t.$$('[data-review-row]').filter(r=>/Already imported/.test(r.textContent)).length,15);
   const onlyNew=t.$('[data-row-include="9"]');onlyNew.checked=false;onlyNew.dispatchEvent(new t.Event('change'));
   await t.click('[data-confirm-import]');
   assert.match(t.$('[role="dialog"] [data-form-message]').textContent,/Select at least one transaction/);
@@ -159,7 +159,7 @@ test('transactions workflow end to end with the real UI code, API and database',
   assert.equal(t.$('[data-new-account]').hidden,false);
   t.$('[data-import-form] [name="accountName"]').value='Card';
   await t.upload('card.csv',new TextEncoder().encode(cardCsv));
-  const mapping=t.$('[data-mapping-form]');assert.ok(mapping,'column matching is requested');t.snap('4-mapping');
+  const mapping=t.$('[data-mapping-form]');assert.ok(mapping,'column matching is requested');assert.ok(mapping.querySelector('.tx-mapping-list'));assert.equal(mapping.querySelector('.tx-table-scroll'),null);t.snap('4-mapping');
   assert.deepEqual([0,1,2,3].map(i=>mapping.querySelector(`[name="column-${i}"]`).value),['date','description','amount','currency']);
   choose(mapping.querySelector('[name="column-1"]'),'counterparty');
   mapping.dispatchEvent(new t.Event('submit',{cancelable:true}));await t.idle();

@@ -98,6 +98,22 @@ Page|Seite|Página
 transactions|Transaktionen|transacciones
 Loading transactions…|Transaktionen werden geladen…|Cargando transacciones…
 Import statement|Kontoauszug importieren|Importar extracto
+Import transactions|Transaktionen importieren|Importar transacciones
+Import a statement|Kontoauszug importieren|Importar un extracto
+Bring in a CSV bank export. You review every item before it is saved.|Lade einen CSV-Kontoauszug hoch. Prüfe jede Buchung, bevor sie gespeichert wird.|Importa un extracto bancario CSV. Revisa cada movimiento antes de guardarlo.
+Upload|Hochladen|Subir
+Match fields|Felder zuordnen|Asignar campos
+Review|Prüfen|Revisar
+Default currency|Standardwährung|Moneda predeterminada
+Drop your statement here|Kontoauszug hier ablegen|Suelta el extracto aquí
+CSV or TXT · up to 10 MB|CSV oder TXT · bis zu 10 MB|CSV o TXT · hasta 10 MB
+Choose file|Datei auswählen|Elegir archivo
+Nothing is imported until you confirm the review.|Erst nach deiner Bestätigung wird etwas importiert.|No se importará nada hasta que confirmes la revisión.
+Tell Duedar where to find the date, description and amount.|Zeige Duedar, wo Datum, Beschreibung und Betrag stehen.|Indica a Duedar dónde encontrar la fecha, la descripción y el importe.
+Continue to review|Weiter zur Prüfung|Continuar a la revisión
+Optional review|Optionale Prüfung|Revisión opcional
+ready to import|bereit zum Import|listas para importar
+Skipped|Übersprungen|Omitida
 Imported bank transactions and the subscriptions you track.|Importierte Banktransaktionen und deine erfassten Abos.|Transacciones bancarias importadas y las suscripciones que sigues.
 All transactions|Alle Transaktionen|Todas las transacciones
 Subscriptions|Abos|Suscripciones
