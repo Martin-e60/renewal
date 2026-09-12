@@ -25,6 +25,34 @@ test('all routes render in EN, DE and ES with associated form labels',async()=>{
   for(const field of h.document.querySelectorAll('.field')){const input=field.querySelector('input,select,textarea'),label=field.querySelector('label');assert.equal(label.getAttribute('for'),input.id);}
  }
 });
+test('dashboard prioritizes the radar and keeps review below the working overview',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/dashboard');h.run(`state.subscriptions=${JSON.stringify([h.sample('a','Netflix'),h.sample('b','Spotify')])}`);await h.run('render()');
+ const hero=h.document.querySelector('.dashboard-hero-grid'),overview=h.document.querySelector('.dashboard-overview-grid'),workflow=h.document.querySelector('.dashboard-workflow');
+ assert.ok(hero.querySelector('.dashboard-radar-card'));
+ assert.ok(overview.querySelector('.spending-card'));
+ assert.ok(overview.querySelector('.upcoming-card'));
+ assert.ok(workflow.querySelector('.workflow-card'));
+ assert.equal(h.document.querySelector('.all-clear'),null);
+});
+test('landing testimonials cycle through varied ratings',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/');await h.run('render()');
+ const carousel=h.document.querySelector('[data-testimonial-carousel]'),before=carousel.querySelector('[data-testimonial-slide]').textContent;
+ assert.equal(carousel.querySelectorAll('[data-testimonial-index]').length,5);
+ assert.match(carousel.textContent,/4\.8\s*\/\s*5/);
+ carousel.querySelector('[data-testimonial-next]').click();
+ assert.notEqual(carousel.querySelector('[data-testimonial-slide]').textContent,before);
+ assert.match(carousel.textContent,/4\.3\s*\/\s*5/);
+});
+test('pricing explains both plans and contact has a usable email fallback plus FAQ',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/pricing');h.run("state.plans=[{id:'price_month',amount:1200,interval:'month',intervalCount:1}]");await h.run('render()');
+ assert.equal(h.document.querySelectorAll('.plan-feature-list').length,2);
+ assert.match(h.document.querySelector('.starter-plan').textContent,/Renewal calendar/);
+ assert.match(h.document.querySelector('.pro-plan').textContent,/Recorded price changes/);
+ h.context.location=new URL('http://localhost:3000/contact');h.run("state.meta={...state.meta,contactEmail:'contact@duedar.com'}");await h.run('render()');
+ assert.match(h.document.querySelector('a[href^="mailto:"]').getAttribute('href'),/^mailto:contact@duedar\.com/);
+ assert.ok(h.document.querySelector('[data-copy-contact-email]'));
+ assert.equal(h.document.querySelectorAll('.faq-item').length,5);
+});
 test('search clears after cycle rerender and restores records; plan names are searchable',async()=>{
  const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/subscriptions');h.run(`state.subscriptions=${JSON.stringify([h.sample('a','Netflix'),h.sample('b','Spotify')])};state.dashboardQuery='Netflix'`);await h.run('render()');
  h.document.querySelector('[data-sub-filter="Monthly"]').click();await h.tick();const search=h.document.querySelector('[data-global-search]');search.value='';search.dispatchEvent(new h.Event('input'));
