@@ -1,5 +1,18 @@
 // Exact UI strings only; user-entered names and file contents are never translated.
 const rows = `
+Find a payment, check your spending, or review a recurring charge.|Finde eine Zahlung, prüfe deine Ausgaben oder einen wiederkehrenden Betrag.|Busca un pago, consulta tus gastos o revisa un cargo recurrente.
+Add manually|Manuell hinzufügen|Añadir manualmente
+Import CSV|CSV importieren|Importar CSV
+Search payments…|Zahlungen suchen…|Buscar pagos…
+Sort & display|Sortierung und Anzeige|Orden y visualización
+Details & edit|Details und Bearbeitung|Detalles y edición
+Payment|Zahlung|Pago
+Filters|Filter|Filtros
+Clear filters|Filter zurücksetzen|Borrar filtros
+All payments · All time|Alle Zahlungen · Gesamter Zeitraum|Todos los pagos · Todo el período
+Spending summary|Ausgabenübersicht|Resumen de gastos
+Totals and categories for the payments above|Summen und Kategorien für die obigen Zahlungen|Totales y categorías de los pagos anteriores
+Import details|Importdetails|Detalles de importación
 Your first renewal|Deine erste Verlängerung|Tu primera renovación
 Which subscription do you want to remember?|Welches Abo möchtest du im Blick behalten?|¿Qué suscripción quieres recordar?
 Add your first subscription|Füge dein erstes Abo hinzu|Añade tu primera suscripción
