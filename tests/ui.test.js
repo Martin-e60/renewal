@@ -158,6 +158,21 @@ test('transactions tab keeps currencies apart, excludes income and transfers, an
  h.document.querySelector('[data-tx-view="review"]').click();await h.tick();assert.match(h.document.querySelector('.tx-review').textContent,/Netflix/);
  h.context.location=new URL('http://localhost:3000/dashboard/subscriptions');await h.run('render()');assert.equal(h.context.location.pathname,'/dashboard/transactions');assert.ok(h.document.querySelector('[data-sub-filter]'));
 });
+test('transaction workspace exposes filter scope, clears an empty search and shows bulk actions only for selection',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/transactions');h.run(`state.tx=${JSON.stringify(txSample())}`);await h.run('render()');
+ assert.equal(h.document.querySelector('.tx-ledger .tx-table thead').querySelectorAll('th').length,4);
+ assert.equal(h.document.querySelector('[data-tx-bulk-bar]').hidden,true);
+ const box=h.document.querySelector('[data-tx-select]');box.checked=true;box.dispatchEvent(new h.Event('change'));
+ assert.equal(h.document.querySelector('[data-tx-bulk-bar]').hidden,false);
+ const search=h.document.querySelector('[data-tx-search]');search.value='missing payment';search.dispatchEvent(new h.Event('input'));
+ assert.equal(h.document.querySelectorAll('[data-tx]').length,0);assert.match(h.document.querySelector('[data-tx-scope]').textContent,/missing payment/);
+ h.document.querySelector('.tx-ledger [data-tx-reset]').click();await h.tick();
+ assert.equal(h.document.querySelectorAll('[data-tx]').length,6);assert.equal(h.document.querySelector('[data-tx-search]').value,'');
+ assert.equal(h.document.querySelector('[data-tx-bulk-bar]').hidden,true);
+ const filter=h.document.querySelector('[data-tx-filters] [name="category"]');choose(filter,'Food & groceries');filter.dispatchEvent(new h.Event('change',{bubbles:true}));
+ assert.match(h.document.querySelector('[data-tx-filter-state]').textContent,/Food & groceries/);
+ assert.ok(h.document.querySelector('[data-tx-kind]').closest('.tx-row-edit'));
+});
 test('import wizard reads the CSV, explains invalid rows and sends reviewed choices',async()=>{
  const h=harness();h.run(`state.tx=${JSON.stringify({...txSample(),accounts:[]})};importStatementModal()`);
  h.document.querySelector('[data-import-form] [name="accountName"]').value='Main';
