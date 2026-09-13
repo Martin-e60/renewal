@@ -250,6 +250,30 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
 .price-card .plan-note{margin:13px 0 0;color:var(--ink-2);font-size:.84rem}
 .pro-plan{position:relative}
 .pro-plan .badge{background:#ebe7ff}
+.plan-checkout{display:grid;justify-items:center;gap:8px;margin-top:auto;padding-top:4px}
+.plan-checkout .btn-block{margin-top:0}
+.plan-price{display:flex;align-items:baseline;justify-content:center;gap:7px;margin:0;color:var(--ink-2);font-size:.9rem}
+.plan-price strong{color:var(--ink);font-size:1.42rem;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.plan-price span{font-weight:700}
+
+/* On Transactions the contextual search lives in the result controls, not in a second top bar. */
+.dash-search.tx-global-search{display:none}
+
+/* The in-app offer borrows the same visual language as the public pricing card. */
+.pro-modal-content{display:grid;gap:14px}
+.pro-modal-head{margin:0}
+.pro-modal-head .eyebrow{display:block;margin-bottom:5px;font-size:.67rem}
+.pro-modal-head h2{font-size:1.72rem;margin-bottom:6px}
+.pro-modal-head p{max-width:480px;line-height:1.45}
+.pro-offer-card,.pro-active-card{display:grid;gap:14px;padding:20px;border:1px solid #cfc7ff;border-radius:16px;background:linear-gradient(145deg,color-mix(in srgb,var(--primary) 10%,var(--surface)),var(--surface));box-shadow:0 14px 30px color-mix(in srgb,var(--primary) 10%,transparent)}
+.pro-offer-copy h3,.pro-active-card h3{margin:8px 0 5px;font-size:1.35rem;letter-spacing:-.035em}
+.pro-offer-copy p,.pro-active-card p{margin:0;color:var(--ink-2);font-size:.9rem}
+.pro-offer-card .check-list{margin:0;gap:8px}
+.pro-offer-card .check-list li{font-size:.88rem}
+.pro-offer-card .plan-checkout{padding-top:2px}
+.pro-active-card{border-color:color-mix(in srgb,var(--success) 48%,var(--border));background:linear-gradient(145deg,color-mix(in srgb,var(--success) 9%,var(--surface)),var(--surface))}
+.pro-active-card .btn{justify-self:start}
+.pro-checkout-note{margin:0;color:var(--ink-2);font-size:.8rem;line-height:1.5}
 
 .contact-hero{padding-bottom:34px}
 .contact-grid{grid-template-columns:minmax(0,1.05fr) minmax(320px,.8fr);gap:30px;align-items:stretch}
@@ -290,5 +314,6 @@ body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-seri
  .calendar-card{padding:9px}.calendar-cell{min-height:58px;padding:3px}.calendar-week span{padding:4px}
  .testimonials-section{padding-top:34px}.testimonial-carousel{padding:22px}.testimonial-slide{min-height:230px;gap:22px}.testimonial-mark{font-size:3.3rem}.testimonial-quote{gap:10px}.testimonial-quote blockquote{font-size:1rem}.testimonial-footer{align-items:flex-start;flex-direction:column;gap:12px}.testimonial-controls{gap:10px}
  .pricing-page{padding-top:44px}.price-card{padding:24px}.plan-summary{min-height:0}
+ .plan-price strong{font-size:1.3rem}.pro-offer-card,.pro-active-card{padding:17px}.pro-modal-head h2{font-size:1.5rem}.pro-active-card .btn{width:100%}
  .contact-actions .btn{width:100%}.contact-helper{padding:22px}.faq-item{padding-inline:15px}.faq-item summary{padding:16px 0}.faq-item p{padding-right:0}
 }
