@@ -589,6 +589,12 @@ Can I export my renewal dates?|Kann ich meine Verlängerungstermine exportieren?
 Yes. In Settings you can export the next 12 months of reminders to your calendar and download your subscription data.|Ja. In den Einstellungen kannst du die nächsten 12 Monate in deinen Kalender exportieren und deine Abodaten herunterladen.|Sí. En Ajustes puedes exportar los próximos 12 meses de recordatorios a tu calendario y descargar tus datos de suscripciones.
 What should I do if a price changes?|Was soll ich bei einer Preisänderung tun?|¿Qué debo hacer si cambia un precio?
 Update the subscription with the new amount and keep its billing date. Pro records price changes so you can see their annual impact.|Aktualisiere das Abo mit dem neuen Betrag und behalte das Zahlungsdatum bei. Pro erfasst Preisänderungen und ihre jährliche Auswirkung.|Actualiza la suscripción con el nuevo importe y conserva la fecha de cobro. Pro registra los cambios de precio para ver su impacto anual.
+Upgrade now|Jetzt upgraden|Mejorar ahora
+Search your transactions|Durchsuche deine Transaktionen|Busca tus transacciones
+Search by merchant, description or category|Suche nach Händler, Beschreibung oder Kategorie|Busca por comercio, descripción o categoría
+Category breakdown|Kategorieübersicht|Desglose por categoría
+categories|Kategorien|categorías
+Import history|Importverlauf|Historial de importaciones
 Email copied to clipboard.|E-Mail in die Zwischenablage kopiert.|Correo copiado al portapapeles.
 `;
 export const translations=Object.fromEntries(rows.trim().split('\n').map(row=>{const [en,de,es]=row.split('|');return [en,{de,es}];}));

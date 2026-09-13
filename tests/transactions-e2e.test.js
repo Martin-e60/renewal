@@ -80,7 +80,7 @@ test('manual entry, bulk rules, freshness and pagination work through the real i
   assert.equal(t.$$('[data-tx]')[0].dataset.tx,saved.transactions.find(x=>x.amount===-0.01).id);
   assert.match(t.$('[data-tx-last-bank-date]').textContent,/Aug 30|30 Aug/);
   t.filter('account',result.bankAccountId);assert.match(t.$('[data-tx-last-date]').textContent,/Aug 30|30 Aug/);
-  const search=t.$('[data-global-search]');search.value='Corner Cafe';search.dispatchEvent(new t.Event('input'));
+  const search=t.$('[data-tx-search]');search.value='Corner Cafe';search.dispatchEvent(new t.Event('input'));assert.equal(t.$('[data-global-search]').value,'Corner Cafe');
   const ids=t.$$('[data-tx-select]').slice(0,2).map(b=>b.dataset.txSelect);
   for(const id of ids){const box=t.$(`[data-tx-select="${id}"]`);box.checked=true;box.dispatchEvent(new t.Event('change'));}
   assert.equal(t.$('[data-tx-selected-count]').textContent,'2');await t.click('[data-tx-bulk]');
@@ -181,9 +181,9 @@ test('transactions workflow end to end with the real UI code, API and database',
   t.filter('account','');t.filter('kind','income');assert.equal(t.rows(),1);assert.equal(t.spending('EUR'),'€0.00');
   t.filter('kind','');t.filter('from','2026-08-01');assert.equal(t.rows(),6);assert.equal(t.spending('EUR'),'€110.88');assert.equal(t.run('state.txFilters.period'),'custom');
   t.filter('period','all');assert.equal(t.rows(),20);
-  const search=t.$('[data-global-search]');search.value='netflix';search.dispatchEvent(new t.Event('input'));
+  let search=t.$('[data-tx-search]');search.value='netflix';search.dispatchEvent(new t.Event('input'));assert.equal(t.$('[data-global-search]').value,'netflix');
   assert.equal(t.rows(),3);assert.equal(t.spending('EUR'),'€41.97');
-  search.value='';search.dispatchEvent(new t.Event('input'));assert.equal(t.rows(),20);
+  search=t.$('[data-tx-search]');search.value='';search.dispatchEvent(new t.Event('input'));assert.equal(t.rows(),20);
 
   // 8. A correction after the import persists after reload.
   const kafe=list.transactions.find(x=>x.description.includes('Kafe'));
