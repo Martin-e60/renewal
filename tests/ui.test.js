@@ -173,6 +173,15 @@ test('transaction workspace exposes filter scope, clears an empty search and sho
  assert.match(h.document.querySelector('[data-tx-filter-state]').textContent,/Food & groceries/);
  assert.ok(h.document.querySelector('[data-tx-kind]').closest('.tx-row-edit'));
 });
+test('page pickers filter and sort using the same controls as the import wizard',async()=>{
+ const h=harness();h.context.location=new URL('http://localhost:3000/dashboard/transactions');h.run(`state.tx=${JSON.stringify(txSample())}`);await h.run('render()');
+ const category=h.document.querySelector('[data-tx-filters] [name="category"]');assert.equal(category.hidden,true);
+ pick(category.nextElementSibling.querySelector('[data-tx-picker]'),'Entertainment');
+ assert.equal(h.document.querySelectorAll('[data-tx]').length,1);
+ assert.match(h.document.querySelector('[data-tx-filter-state]').textContent,/Entertainment/);
+ const sort=h.document.querySelector('[data-tx-sort]');pick(sort.nextElementSibling.querySelector('[data-tx-picker]'),'date-asc');
+ assert.equal(h.run('state.txSort'),'date-asc');
+});
 test('import wizard reads the CSV, explains invalid rows and sends reviewed choices',async()=>{
  const h=harness();h.run(`state.tx=${JSON.stringify({...txSample(),accounts:[]})};importStatementModal()`);
  h.document.querySelector('[data-import-form] [name="accountName"]').value='Main';

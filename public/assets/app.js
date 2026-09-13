@@ -379,11 +379,23 @@ function updateTransactionResults(){
  const input=host.querySelector('[data-tx-search]'),active=document.activeElement===input,start=input?.selectionStart,end=input?.selectionEnd;
  const openRows=new Set([...host.querySelectorAll('.tx-row-edit[open]')].map(el=>el.closest('[data-tx]').dataset.tx));
  const disclosures=['.tx-spending-disclosure','.tx-import-details','.tx-view-options'].filter(selector=>host.querySelector(selector)?.hasAttribute('open'));
- host.innerHTML=transactionResults();bindTransactionRows(host);translateSurface(host);
+ host.innerHTML=transactionResults();bindTransactionRows(host);enhanceTransactionPickers(document);translateSurface(host);
  host.querySelectorAll('[data-tx]').forEach(row=>{if(openRows.has(row.dataset.tx))row.querySelector('.tx-row-edit')?.setAttribute('open','');});
  disclosures.forEach(selector=>host.querySelector(selector)?.setAttribute('open',''));
  const label=document.querySelector('[data-tx-filter-state]');if(label)label.innerHTML=transactionFilterText();
  if(active){const next=host.querySelector('[data-tx-search]');next?.focus();if(start!=null)next?.setSelectionRange?.(start,end);}
+}
+function enhanceTransactionPickers(root){
+ root.querySelectorAll('.tx-page select,[data-bulk-category-form] select,[data-manual-transaction-form] select').forEach(select=>{
+  if(select.dataset.customPicker)return;
+  const holder=document.createElement('div');holder.className='tx-select-holder';
+  const label=select.getAttribute('aria-label')||select.closest('label')?.querySelector('span')?.textContent||select.closest('.field')?.querySelector('label')?.textContent||'Choose an option';
+  holder.innerHTML=txPicker({name:'',inputAttr:'data-page-picker-value',value:select.value,options:[...select.options].map(option=>({value:option.value,label:option.textContent,userContent:option.hasAttribute('data-user-content')})),label,variant:'tx-page-picker'});
+  select.after(holder);select.hidden=true;select.dataset.customPicker='true';select.tabIndex=-1;
+  bindTxPickers(holder,(picker,value)=>{[...select.options].forEach(option=>option.toggleAttribute('selected',option.value===value));const chosen=[...select.options].find(option=>option.value===value);if(chosen)chosen.selected=true;select.dispatchEvent(new document.defaultView.Event('change',{bubbles:true}));if(picker.isConnected)picker.querySelector('summary')?.focus();});
+  select.addEventListener('change',()=>setTxPickerValue(holder.querySelector('[data-tx-picker]'),select.value));
+ });
+ root.querySelectorAll('select[data-custom-picker]').forEach(select=>{const picker=select.nextElementSibling?.querySelector('[data-tx-picker]');if(picker){setTxPickerValue(picker,select.value);setTxPickerDisabled(picker,select.disabled);}});
 }
 function bindTransactionRows(root){
  root.querySelectorAll('[data-tx-reset]').forEach(button=>{if(button.dataset.resetBound)return;button.dataset.resetBound='true';button.addEventListener('click',clearTransactionFilters);});
@@ -436,6 +448,7 @@ function bulkCategoryModal(){
  const merchants=[...new Set(items.map(t=>t.merchant))];
  showModal(`<div class="modal-head"><h2>Change category</h2><button class="close" data-close-modal aria-label="Close">${svgIcon('close')}</button></div><form class="form" data-bulk-category-form><div data-form-message></div><p><strong>${items.length}</strong> <span>selected transactions</span></p><div class="field"><label>Category</label><select class="input" name="category">${categoryOptions(items[0].category)}</select></div><label class="tx-check-label"><input type="checkbox" name="rememberRule"><span>Remember this category for future transactions from these merchants</span></label><p class="muted" data-user-content>${merchants.map(esc).join(', ')}</p><p class="muted">Existing unselected transactions will not change. Saving a rule replaces any previous rule for the same merchant.</p><div class="modal-actions"><button type="button" class="btn btn-secondary" data-close-modal>Cancel</button><button class="btn btn-primary" type="submit">Apply category</button></div></form>`);
  const form=modalRoot.querySelector('[data-bulk-category-form]');
+ enhanceTransactionPickers(modalRoot);
  form.addEventListener('submit',e=>{e.preventDefault();runAction(form.querySelector('[type="submit"]'),async()=>{
   await api('/api/transactions/bulk-category',{method:'POST',body:JSON.stringify({ids,category:form.querySelector('[name="category"]').value,rememberRule:form.querySelector('[name="rememberRule"]').checked})});
   closeModal();state.txSelected.clear();await loadTransactions();render();toast('Categories updated.','success');
@@ -450,6 +463,7 @@ function manualTransactionModal(){
  const accounts=state.tx.accounts,requestId=crypto.randomUUID();
  showModal(`<div class="modal-head"><h2>Add transaction</h2><button class="close" data-close-modal aria-label="Close">${svgIcon('close')}</button></div><form class="form" data-manual-transaction-form><div data-form-message></div><div class="field"><label>Account</label><select class="input" name="accountId">${accounts.map((a,i)=>`<option value="${esc(a.id)}" data-user-content ${i===0?'selected':''}>${esc(a.name)}</option>`).join('')}<option value="" ${accounts.length?'':'selected'}>New account…</option></select></div><div class="field" data-manual-new-account ${accounts.length?'hidden':''}><label>New account name</label><input class="input" name="accountName" maxlength="80" placeholder="e.g. Cash wallet" ${accounts.length?'':'required'}></div><div class="tx-manual-grid"><div class="field"><label>Date</label><input class="input" type="date" name="date" value="${today()}" required></div><div class="field"><label>Type</label><select class="input" name="kind">${kindOptions('expense')}</select></div><div class="field"><label>Amount</label><input class="input" type="number" inputmode="decimal" min="0.01" max="1000000000" step="0.01" name="amount" required></div><div class="field"><label>Currency</label><input class="input" name="currency" value="EUR" minlength="3" maxlength="3" pattern="[A-Za-z]{3}" required></div></div><div class="field"><label>Description</label><input class="input" name="description" maxlength="300" required></div><div class="field" data-manual-category><label>Category</label><select class="input" name="category"><option value="">Automatic</option>${categoryOptions('')}</select></div><div class="field" data-manual-direction hidden><label>Direction</label><select class="input" name="direction"><option value="out">Money out</option><option value="in">Money in</option></select></div><div class="modal-actions"><button type="button" class="btn btn-secondary" data-close-modal>Cancel</button><button class="btn btn-primary" type="submit">Save transaction</button></div></form>`);
  const form=modalRoot.querySelector('[data-manual-transaction-form]');
+ enhanceTransactionPickers(modalRoot);
  form.querySelector('[name="accountId"]').addEventListener('change',e=>{form.querySelector('[data-manual-new-account]').hidden=!!e.target.value;form.querySelector('[name="accountName"]').required=!e.target.value;});
  form.querySelector('[name="kind"]').addEventListener('change',e=>{form.querySelector('[data-manual-category]').hidden=!isSpendingKind(e.target.value);form.querySelector('[data-manual-direction]').hidden=e.target.value!=='transfer';});
  form.addEventListener('submit',e=>{e.preventDefault();runAction(form.querySelector('[type="submit"]'),async()=>{
@@ -735,7 +749,7 @@ function bindInteractions(){bindBilling(app);bindWorkflow(app);bindTestimonials(
   document.querySelectorAll('[data-cal-nav]').forEach(b=>b.addEventListener('click',()=>{state.calendarDate=new Date(state.calendarDate.getFullYear(),state.calendarDate.getMonth()+Number(b.dataset.calNav),1);render();}));
   document.querySelectorAll('[data-calendar-day]').forEach(b=>b.addEventListener('click',()=>{const ids=(b.dataset.calendarSubs||'').split(',').filter(Boolean);if(!ids.length)return;const subs=ids.map(id=>state.subscriptions.find(s=>s.uid===id)).filter(Boolean);showModal(`<div class="modal-head"><div><h2>${b.dataset.calendarDay} ${state.calendarDate.toLocaleDateString(locale(),{month:'long',year:'numeric'})}</h2><p>${subs.length} ${state.lang==='de'?'Verlängerungen geplant.':state.lang==='es'?'renovaciones programadas.':'renewals scheduled.'}</p></div><button class="close" data-close-modal>${svgIcon('close')}</button></div><div class="renewal-list">${subs.map(s=>subscriptionRow(s,dateKey(new Date(state.calendarDate.getFullYear(),state.calendarDate.getMonth(),Number(b.dataset.calendarDay))))).join('')}</div>`);}));
   document.querySelectorAll('[data-keep-sub]').forEach(b=>b.addEventListener('click',()=>runAction(b,async()=>{await saveAccount(state.subscriptions.map(s=>s.uid===b.dataset.keepSub?{...s,lastReviewedDate:today()}:s));render();})));
-  bindSubscriptionActions(app);bindTransactions();
+  bindSubscriptionActions(app);bindTransactions();enhanceTransactionPickers(app);
   document.querySelector('[data-doc-upload]')?.addEventListener('change',uploadDocument);
   document.querySelectorAll('[data-delete-doc]').forEach(b=>b.addEventListener('click',()=>deleteDocumentModal(b.dataset.deleteDoc)));
   document.querySelector('[data-profile-form]')?.addEventListener('submit',e=>{e.preventDefault();const form=e.currentTarget,fd=new FormData(form);runAction(form.querySelector('button'),async()=>{const data=await api('/api/account/profile',{method:'POST',body:JSON.stringify({name:fd.get('name')})});state.user=data.user;form.dataset.dirty='false';toast('Profile updated.','success');},form);});

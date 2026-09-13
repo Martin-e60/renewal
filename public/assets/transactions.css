@@ -3,6 +3,12 @@
    file can be replaced without touching logic. Built on the tokens in styles.css. */
 
 .tx-page{display:grid;gap:14px}
+.tx-page select[data-custom-picker]{display:none!important}
+.tx-select-holder{min-width:0;width:100%}
+.tx-page-picker .tx-picker-menu{position:static;margin-top:6px;max-height:220px;box-shadow:none}
+.tx-page-picker .tx-picker-trigger{min-height:44px;font-size:.85rem}
+.tx-page-picker .tx-picker-option{min-height:40px;white-space:normal;overflow-wrap:anywhere}
+.tx-row-edit-fields .tx-select-holder{grid-column:1/-1}
 .tx-ledger{min-width:0;overflow:visible}
 .tx-ledger .tx-results-toolbar{grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:16px;gap:16px}
 .tx-ledger .tx-results-count{display:flex;min-width:0;gap:6px;padding:0}
